@@ -15,8 +15,8 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return a PingResponse with status of success', () => {
+      expect(appController.checkStatus()).toMatchObject({ status: 'success' });
     });
   });
 });

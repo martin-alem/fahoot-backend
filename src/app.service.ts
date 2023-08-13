@@ -1,8 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { PingResponse } from './shared/types/ping-response.type';
 
 @Injectable()
 export class AppService {
-  getHello(): string {
-    return 'Hello World!';
+  checkStatus(): PingResponse {
+    return {
+      status: 'success',
+      message: 'Server is up and running',
+      timestamp: new Date().toISOString(),
+    };
   }
 }
