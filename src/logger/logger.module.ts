@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { LoggerService } from './logger.service';
-import { RabbitMQModule } from 'src/rabbitmq/rabbitmq.module';
+import { RabbitMQModule } from './../rabbitmq/rabbitmq.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Log, LogsSchema } from './schema/log.schema';
 
@@ -10,5 +10,6 @@ import { Log, LogsSchema } from './schema/log.schema';
     MongooseModule.forFeature([{ name: Log.name, schema: LogsSchema }]),
   ],
   providers: [LoggerService],
+  exports: [LoggerService],
 })
 export class LoggerModule {}

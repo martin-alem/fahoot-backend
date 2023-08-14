@@ -12,6 +12,7 @@ import { LoggerModule } from '../logger/logger.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as Joi from 'joi';
 import { MongooseModule } from '@nestjs/mongoose';
+import { RabbitMQModule } from 'src/rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [
@@ -30,6 +31,9 @@ import { MongooseModule } from '@nestjs/mongoose';
         JWT_SECRET: Joi.string().required(),
         JWT_TOKEN_AUDIENCE: Joi.string().required(),
         JWT_TOKEN_ISSUER: Joi.string().required(),
+        RABBITMQ_URI: Joi.string().required(),
+        GMAIL_EMAIL: Joi.string().required(),
+        GMAIL_PASSWORD: Joi.string().required(),
       }),
     }),
 
@@ -48,6 +52,7 @@ import { MongooseModule } from '@nestjs/mongoose';
     ParticipationModule,
     AnalyticsModule,
     LoggerModule,
+    RabbitMQModule,
   ],
   controllers: [AppController],
   providers: [AppService],

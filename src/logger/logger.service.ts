@@ -43,7 +43,7 @@ export class LoggerService implements OnModuleInit {
     );
   }
 
-  async getLogs(
+  public async getLogs(
     filterOption: Partial<FilterDTO>,
     pagination: PaginationOptions,
   ): Promise<PaginationResult<Log>> {
