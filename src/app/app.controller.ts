@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
-import { PingResponse } from './shared/types/ping-response.type';
+import { PingResponse } from './../shared/types/ping-response.type';
 
 @Controller()
 export class AppController {
