@@ -5,10 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Log, LogsSchema } from './schema/log.schema';
 
 @Module({
-  imports: [
-    RabbitMQModule,
-    MongooseModule.forFeature([{ name: Log.name, schema: LogsSchema }]),
-  ],
+  imports: [RabbitMQModule, MongooseModule.forFeature([{ name: Log.name, schema: LogsSchema }])],
   providers: [LoggerService],
   exports: [LoggerService],
 })

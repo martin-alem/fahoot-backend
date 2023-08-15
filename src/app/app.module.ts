@@ -12,7 +12,7 @@ import { LoggerModule } from '../logger/logger.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as Joi from 'joi';
 import { MongooseModule } from '@nestjs/mongoose';
-import { RabbitMQModule } from 'src/rabbitmq/rabbitmq.module';
+import { RabbitMQModule } from './../rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [

@@ -3,11 +3,7 @@ import { Channel, ConsumeMessage } from 'amqplib';
 import { RabbitMQService } from './../rabbitmq/rabbitmq.service';
 import nodemailer from 'nodemailer';
 import { ConfigService } from '@nestjs/config';
-import {
-  IEmailOption,
-  INotification,
-  NotificationType,
-} from './../shared/types/notification.type';
+import { IEmailOption, INotification, NotificationType } from './../shared/types/notification.type';
 import { LoggerService } from './../logger/logger.service';
 
 @Injectable()
@@ -17,11 +13,7 @@ export class NotificationService implements OnModuleInit {
   private readonly configService: ConfigService;
   private readonly loggerService: LoggerService;
 
-  constructor(
-    rabbitMQService: RabbitMQService,
-    loggerService: LoggerService,
-    configService: ConfigService,
-  ) {
+  constructor(rabbitMQService: RabbitMQService, loggerService: LoggerService, configService: ConfigService) {
     this.rabbitMQService = rabbitMQService;
     this.configService = configService;
     this.loggerService = loggerService;
@@ -31,10 +23,7 @@ export class NotificationService implements OnModuleInit {
     await this.rabbitMQService.connect();
     this.channel = this.rabbitMQService.getChannel();
     await this.channel.assertQueue('notifications');
-    await this.channel.consume(
-      'notifications',
-      this.processLogMessage.bind(this),
-    );
+    await this.channel.consume('notifications', this.processLogMessage.bind(this));
   }
 
   public enqueueNotification(message: string): boolean {
