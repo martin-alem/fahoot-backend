@@ -1,5 +1,5 @@
 import { IsDate, IsOptional, IsString } from 'class-validator';
-import { LEVEL } from './../../shared/types/log.types';
+import { LEVEL } from '../../types/log.types';
 
 export class FilterDTO {
   @IsOptional()

@@ -1,10 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { NotificationService } from './notification.service';
-import { RabbitMQModule } from './../rabbitmq/rabbitmq.module';
 import { LoggerModule } from './../logger/logger.module';
 
+@Global()
 @Module({
-  imports: [RabbitMQModule, LoggerModule],
+  imports: [LoggerModule],
   providers: [NotificationService],
+  exports: [NotificationService],
 })
 export class NotificationModule {}

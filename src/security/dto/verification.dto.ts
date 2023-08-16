@@ -1,4 +1,5 @@
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { IsEmail, IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { EmailPurpose } from '../../utils/constant';
 
 export class VerificationLinkDTO {
   @IsNotEmpty()
@@ -10,6 +11,6 @@ export class VerificationLinkDTO {
   subject: string;
 
   @IsNotEmpty()
-  @IsString()
-  message: string;
+  @IsEnum(EmailPurpose)
+  emailPurpose: EmailPurpose;
 }

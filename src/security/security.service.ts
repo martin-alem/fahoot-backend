@@ -1,16 +1,18 @@
-import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, InternalServerErrorException, UnauthorizedException, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoggerService } from './../logger/logger.service';
-import { IAuthUser } from './../shared/types/user.types';
-import { ErrorMessages, JWT_TTL } from './../shared/utils/constant';
+import { IAuthUser, UserRole } from '../types/user.types';
+import { EmailPurpose, ErrorMessages, JWT_TTL } from '../utils/constant';
 import { NotificationService } from './../notification/notification.service';
-import { NotificationType } from './../shared/types/notification.type';
-import { LEVEL } from './../shared/types/log.types';
+import { NotificationType } from '../types/notification.type';
+import { LEVEL } from '../types/log.types';
 import { Model } from 'mongoose';
 import { Token } from './schema/tokens.schema';
 import { InjectModel } from '@nestjs/mongoose';
+import { createEmailVerificationTemplate, createPasswordResetTemplate } from '../utils/send_email';
+import { UserService } from './../user/user.service';
 
 @Injectable()
 export class SecurityService {
@@ -19,10 +21,12 @@ export class SecurityService {
   private readonly loggerService: LoggerService;
   private readonly notificationService: NotificationService;
   private readonly tokenModel: Model<Token>;
+  private readonly userService: UserService;
 
-  constructor(jwtService: JwtService, configService: ConfigService, loggerService: LoggerService, notificationService: NotificationService, @InjectModel(Token.name) tokenModel: Model<Token>) {
+  constructor(jwtService: JwtService, configService: ConfigService, @Inject(forwardRef(() => UserService)) userService: UserService, loggerService: LoggerService, notificationService: NotificationService, @InjectModel(Token.name) tokenModel: Model<Token>) {
     this.jwtService = jwtService;
     this.configService = configService;
+    this.userService = userService;
     this.loggerService = loggerService;
     this.notificationService = notificationService;
     this.tokenModel = tokenModel;
@@ -68,13 +72,14 @@ export class SecurityService {
    * @returns the decoded jwt token if the token is valid
    * @throws UnauthorizedException if the token is not valid
    */
-  async validateToken(token: string): Promise<unknown> {
+  async validateToken(token: string): Promise<IAuthUser> {
     try {
-      return this.jwtService.verify(token, {
+      const decodedToken = await this.jwtService.verify(token, {
         audience: this.configService.get<string>('JWT_TOKEN_AUDIENCE'),
         issuer: this.configService.get<string>('JWT_TOKEN_ISSUER'),
         secret: this.configService.get<string>('JWT_SECRET'),
       });
+      return decodedToken as IAuthUser;
     } catch (error) {
       this.loggerService.log(
         JSON.stringify({
@@ -151,8 +156,22 @@ export class SecurityService {
     }
   }
 
-  public async sendVerificationLink(emailAddress: string, subject: string, message: string): Promise<void> {
+  public async sendVerificationLink(emailAddress: string, subject: string, emailPurpose: EmailPurpose): Promise<void> {
     try {
+      let message = '';
+      const token = await this.generateTokens({ id: '', emailAddress: emailAddress, role: UserRole.USER });
+
+      const newToken = await this.tokenModel.create({ token: token, emailAddress: emailAddress });
+
+      if (!newToken) throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
+
+      if (emailPurpose === EmailPurpose.EMAIL_VERIFICATION) {
+        const link = `${this.configService.get<string>('VERIFY_EMAIL_URL')}?token=${token}`;
+        message = createEmailVerificationTemplate(link);
+      } else if (emailPurpose === EmailPurpose.PASSWORD_RESET) {
+        const link = `${this.configService.get<string>('PASSWORD_RESET_URL')}?token=${token}`;
+        message = createPasswordResetTemplate(link);
+      }
       const payload = {
         to: emailAddress,
         subject,
@@ -173,31 +192,57 @@ export class SecurityService {
     }
   }
 
-  public async verifyEmail(token: string): Promise<void> {
+  public async verifyToken(token: string): Promise<IAuthUser> {
+    const session = await this.tokenModel.startSession();
+    session.startTransaction();
     try {
+      const tokenExist = await this.tokenModel.findOne({ token: token }).session(session);
+      if (!tokenExist) throw new UnauthorizedException(ErrorMessages.UNAUTHORIZED);
+
       const decodedToken = await this.validateToken(token);
-      console.log(decodedToken);
-      // TODO: verify user email address
-      // TODO: Update user
+      if (decodedToken.emailAddress !== tokenExist.emailAddress) throw new UnauthorizedException(ErrorMessages.TOKEN_EMAIL_MISMATCH);
+
+      await this.tokenModel.findOneAndDelete({ token }).session(session);
+
+      await session.commitTransaction();
+
+      return decodedToken;
     } catch (error) {
+      await session.abortTransaction(); // Rollback on error
       this.loggerService.log(
         JSON.stringify({
-          event: 'token_generation_error',
+          event: 'token_verification_error',
           description: error.message,
         }),
       );
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  public async verifyEmail(token: string): Promise<void> {
+    try {
+      const decodedToken = await this.verifyToken(token);
+      await this.userService.updateSensitiveData({ verified: true }, decodedToken.emailAddress); // Pass session
+      return;
+    } catch (error) {
+      this.loggerService.log(
+        JSON.stringify({
+          event: 'email_verification_error',
+          description: error.message,
+        }),
+      );
+      throw error;
     }
   }
 
   public async passwordResetRequest(emailAddress: string): Promise<void> {
     try {
       const subject = 'Password Reset Request';
-      const message = 'Please follow the link below to reset your password';
-      await this.sendVerificationLink(emailAddress, subject, message);
-      //TODO: Check to make sure the email address exist.
-      //TODO: if the email address exist send an email
-      //TODO: Save a copy of the token generated
-      //TODO: send back a 200 ok response
+      await this.userService.findByEmailAddress(emailAddress);
+      await this.sendVerificationLink(emailAddress, subject, EmailPurpose.PASSWORD_RESET);
+      return;
     } catch (error) {
       this.loggerService.log(
         JSON.stringify({
@@ -206,16 +251,14 @@ export class SecurityService {
           level: LEVEL.CRITICAL,
         }),
       );
+      throw error;
     }
   }
   public async passwordReset(token: string, password: string): Promise<void> {
     try {
-      const decodedToken = await this.validateToken(token);
-      console.log(decodedToken);
-      //TODO: decoded token wil contain the email address. If it matches what was associated with token hash the password
+      const decodedToken = await this.verifyToken(token);
       const hashedPassword = await this.hash(password);
-      console.log(hashedPassword);
-      //TODO:Update the user password.
+      await this.userService.updateSensitiveData({ password: hashedPassword }, decodedToken.emailAddress);
     } catch (error) {
       this.loggerService.log(
         JSON.stringify({

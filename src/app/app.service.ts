@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PingResponse } from '../shared/types/ping-response.type';
+import { PingResponse } from '../types/ping-response.type';
 
 @Injectable()
 export class AppService {

@@ -6,7 +6,7 @@ export class Token {
   @Prop({ type: String, required: true, unique: true })
   token: string;
 
-  @Prop({ type: String, required: true, unique: true })
+  @Prop({ type: String, required: true })
   emailAddress: string;
 }
 

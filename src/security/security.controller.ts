@@ -1,6 +1,6 @@
 import { Body, Controller, InternalServerErrorException, Post, Query } from '@nestjs/common';
 import { SecurityService } from './security.service';
-import { EMAIL_VERIFICATION_REQUEST, ErrorMessages, PASSWORD_RESET, PASSWORD_RESET_REQUEST, SEND_VERIFICATION_LINK_REQUEST } from './../shared/utils/constant';
+import { EMAIL_VERIFICATION_REQUEST, ErrorMessages, PASSWORD_RESET, PASSWORD_RESET_REQUEST, SEND_VERIFICATION_LINK_REQUEST } from '../utils/constant';
 import { Throttle } from '@nestjs/throttler';
 import { VerificationLinkDTO } from './dto/verification.dto';
 import { PasswordResetRequestDTO } from './dto/password_reset_request.dto';
@@ -26,11 +26,11 @@ export class SecurityController {
   }
 
   @Throttle(SEND_VERIFICATION_LINK_REQUEST.LIMIT, SEND_VERIFICATION_LINK_REQUEST.TTL)
-  @Post('send_verification_link')
+  @Post('/send_verification_link')
   public async sendVerificationLink(@Body() payload: VerificationLinkDTO): Promise<void> {
     try {
-      const { emailAddress, subject, message } = payload;
-      await this.securityService.sendVerificationLink(emailAddress, subject, message);
+      const { emailAddress, subject, emailPurpose } = payload;
+      await this.securityService.sendVerificationLink(emailAddress, subject, emailPurpose);
       return;
     } catch (error) {
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
@@ -38,7 +38,7 @@ export class SecurityController {
   }
 
   @Throttle(PASSWORD_RESET_REQUEST.LIMIT, PASSWORD_RESET_REQUEST.TTL)
-  @Post('password_reset_request')
+  @Post('/password_reset_request')
   public async passwordResetRequest(@Body() payload: PasswordResetRequestDTO): Promise<void> {
     try {
       const { emailAddress } = payload;
@@ -50,7 +50,7 @@ export class SecurityController {
   }
 
   @Throttle(PASSWORD_RESET.LIMIT, PASSWORD_RESET.TTL)
-  @Post('password_reset')
+  @Post('/password_reset')
   public async passwordReset(@Body() payload: PasswordResetDTO): Promise<void> {
     try {
       const { password, token } = payload;

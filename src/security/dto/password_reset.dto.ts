@@ -1,5 +1,5 @@
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
-import { IsValidPassword } from './../../shared/decorator/validation/isValidPassword.decorator';
+import { IsValidPassword } from '../../decorator/validation/isValidPassword.decorator';
 
 export class PasswordResetDTO {
   @IsNotEmpty()

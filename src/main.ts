@@ -10,12 +10,7 @@ async function bootstrap(): Promise<void> {
   app.use(cookieParser(process.env.COOKIE_SECRET));
   app.enableCors({
     origin: function (origin, callback) {
-      const allowedOrigins = [
-        'http://localhost:8000',
-        'http://localhost',
-        'https://fahoot.com',
-        'https://www.fahoot.com',
-      ];
+      const allowedOrigins = ['http://localhost:8000', 'http://localhost', 'https://fahoot.com', 'https://www.fahoot.com'];
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -23,11 +18,7 @@ async function bootstrap(): Promise<void> {
       }
     },
     credentials: true, // include this line to allow cookies
-    allowedHeaders: [
-      'Access-Control-Allow-Origin',
-      'Content-Type',
-      'Authorization',
-    ], // Allow necessary headers
+    allowedHeaders: ['Access-Control-Allow-Origin', 'Content-Type', 'Authorization'], // Allow necessary headers
   });
   await app.listen(3000);
 }

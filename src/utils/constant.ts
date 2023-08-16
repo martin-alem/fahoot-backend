@@ -6,12 +6,20 @@ export enum ErrorMessages {
   USER_NOT_FOUND = 'User with provided id not found',
   USER_EXIST = 'User with provided email address already exists',
   VERIFICATION_EXPIRED = 'Your verification code has expired',
-  INVALID_VERIFICATION = 'Your verification code is invalid',
   UNAUTHORIZED = 'Your user is not authorized to carry out this operation',
   UPLOAD_ERROR = 'Something went wrong while uploading the file',
-  SESSION_NOT_FOUND = 'Session not found.',
   FORBIDDEN = 'Your forbidden to access this resource.',
-  ACTIVITY_NOT_FOUND = 'could not find activity',
+  TOKEN_EMAIL_MISMATCH = 'The email address on the decoded token was not the same as the one in the database',
+}
+
+export enum Status {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+}
+
+export enum EmailPurpose {
+  EMAIL_VERIFICATION = 'email verification',
+  PASSWORD_RESET = 'password reset',
 }
 
 export enum JWT_TTL {
@@ -43,6 +51,38 @@ export enum PASSWORD_RESET_REQUEST {
 }
 
 export enum PASSWORD_RESET {
+  /**
+   * 5 request in 60 seconds
+   */
+  LIMIT = 5,
+  TTL = 60,
+}
+
+export enum CREATE_USER_REQUEST {
+  /**
+   * 15 request in 60 seconds
+   */
+  LIMIT = 15,
+  TTL = 60,
+}
+
+export enum GET_USER_REQUEST {
+  /**
+   * 30 request in 60 seconds
+   */
+  LIMIT = 30,
+  TTL = 60,
+}
+
+export enum UPDATE_USER_REQUEST {
+  /**
+   * 30 request in 60 seconds
+   */
+  LIMIT = 30,
+  TTL = 60,
+}
+
+export enum DELETE_USER_REQUEST {
   /**
    * 5 request in 60 seconds
    */

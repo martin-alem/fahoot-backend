@@ -3,7 +3,7 @@ import { Channel, ConsumeMessage } from 'amqplib';
 import { RabbitMQService } from './../rabbitmq/rabbitmq.service';
 import nodemailer from 'nodemailer';
 import { ConfigService } from '@nestjs/config';
-import { IEmailOption, INotification, NotificationType } from './../shared/types/notification.type';
+import { IEmailOption, INotification, NotificationType } from '../types/notification.type';
 import { LoggerService } from './../logger/logger.service';
 
 @Injectable()

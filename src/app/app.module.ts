@@ -10,18 +10,31 @@ import { ParticipationModule } from '../participation/participation.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { LoggerModule } from '../logger/logger.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import * as Joi from 'joi';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RabbitMQModule } from './../rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot({
+      ttl: 60,
+      limit: 10,
+    }),
+    UserModule,
+    AuthenticationModule,
+    SecurityModule,
+    NotificationModule,
+    QuizModule,
+    ParticipationModule,
+    AnalyticsModule,
+    LoggerModule,
+    RabbitMQModule,
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema: Joi.object({
-        NODE_ENV: Joi.string()
-          .valid('development', 'production')
-          .default('development'),
+        NODE_ENV: Joi.string().valid('development', 'production').default('development'),
         DATABASE_URL: Joi.string().required(),
         COOKIE_SECRET: Joi.string().required(),
         PORT: Joi.number().default(3000),
@@ -34,6 +47,9 @@ import { RabbitMQModule } from './../rabbitmq/rabbitmq.module';
         RABBITMQ_URI: Joi.string().required(),
         GMAIL_EMAIL: Joi.string().required(),
         GMAIL_PASSWORD: Joi.string().required(),
+        CLIENT_API_KEY: Joi.string().required(),
+        VERIFY_EMAIL_URL: Joi.string().required(),
+        PASSWORD_RESET_URL: Joi.string().required(),
       }),
     }),
 
@@ -44,17 +60,14 @@ import { RabbitMQModule } from './../rabbitmq/rabbitmq.module';
         uri: configService.get<string>('DATABASE_URL'),
       }),
     }),
-    UserModule,
-    AuthenticationModule,
-    SecurityModule,
-    NotificationModule,
-    QuizModule,
-    ParticipationModule,
-    AnalyticsModule,
-    LoggerModule,
-    RabbitMQModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

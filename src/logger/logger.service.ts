@@ -4,7 +4,7 @@ import { RabbitMQService } from './../rabbitmq/rabbitmq.service';
 import { Model } from 'mongoose';
 import { Log } from './schema/log.schema';
 import { InjectModel } from '@nestjs/mongoose';
-import { PaginationOptions, PaginationResult } from 'src/shared/types/pagination.types';
+import { PaginationOptions, PaginationResult } from 'src/types/pagination.types';
 import { FilterDTO } from './dto/filter.dto';
 
 @Injectable()
