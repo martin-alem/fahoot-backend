@@ -1,8 +1,12 @@
 import { Injectable, Scope } from '@nestjs/common';
+import { Status } from './../utils/constant';
+import { UserRole } from './../types/user.types';
 
 @Injectable({ scope: Scope.REQUEST })
 export class AuthService {
   private id: string;
+  private status: Status;
+  private role: UserRole;
   private userAgent: string;
   private ipAddress: string;
   private method: string;
@@ -16,6 +20,22 @@ export class AuthService {
 
   public getId(): string {
     return this.id;
+  }
+
+  public setStatus(status: Status): void {
+    this.status = status;
+  }
+
+  public getStatus(): Status {
+    return this.status;
+  }
+
+  public setRole(role: UserRole): void {
+    this.role = role;
+  }
+
+  public getRole(): UserRole {
+    return this.role;
   }
 
   public setUserAgent(userAgent: string): void {

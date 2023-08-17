@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoggerService } from './../logger/logger.service';
 import { IAuthUser, UserRole } from '../types/user.types';
-import { EmailPurpose, ErrorMessages, JWT_TTL } from '../utils/constant';
+import { EmailPurpose, ErrorMessages, JWT_TTL, Status } from '../utils/constant';
 import { NotificationService } from './../notification/notification.service';
 import { NotificationType } from '../types/notification.type';
 import { LEVEL } from '../types/log.types';
@@ -224,7 +224,7 @@ export class SecurityService {
   public async verifyEmail(token: string): Promise<void> {
     try {
       const decodedToken = await this.verifyToken(token);
-      await this.userService.updateSensitiveData({ verified: true }, decodedToken.emailAddress); // Pass session
+      await this.userService.updateSensitiveData({ verified: true, status: Status.ACTIVE }, decodedToken.emailAddress); // Pass session
       return;
     } catch (error) {
       this.loggerService.log(

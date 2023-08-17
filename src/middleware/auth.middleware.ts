@@ -32,6 +32,8 @@ export class AuthenticationMiddleware implements NestMiddleware {
         throw new NotFoundException(`User ${decodedPayload.id} not found`);
       }
       this.authService.setId(decodedPayload.id);
+      this.authService.setStatus(user.status);
+      this.authService.setRole(decodedPayload.role);
       next();
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
