@@ -84,8 +84,48 @@ export enum UPDATE_USER_REQUEST {
 
 export enum DELETE_USER_REQUEST {
   /**
-   * 5 request in 60 seconds
+   * 1 request in 60 seconds
    */
-  LIMIT = 5,
+  LIMIT = 1,
+  TTL = 60,
+}
+
+export enum CREATE_QUIZ_REQUEST {
+  /**
+   * 25 request in 60 seconds
+   */
+  LIMIT = 25,
+  TTL = 60,
+}
+
+export enum GET_QUIZ_REQUEST {
+  /**
+   * 25 request in 60 seconds
+   */
+  LIMIT = 25,
+  TTL = 60,
+}
+
+export enum GET_QUIZZES_REQUEST {
+  /**
+   * 25 request in 60 seconds
+   */
+  LIMIT = 25,
+  TTL = 60,
+}
+
+export enum UPDATE_QUIZ_REQUEST {
+  /**
+   * 25 request in 60 seconds
+   */
+  LIMIT = 25,
+  TTL = 60,
+}
+
+export enum DELETE_QUIZ_REQUEST {
+  /**
+   * 1 request in 60 seconds
+   */
+  LIMIT = 1,
   TTL = 60,
 }
