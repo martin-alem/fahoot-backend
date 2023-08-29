@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { BadRequestException, Inject, Injectable, InternalServerErrorException, NotFoundException, forwardRef } from '@nestjs/common';
 import { LoggerService } from './../logger/logger.service';
-import { User } from './schema/user.schema';
-import { Model, Types } from 'mongoose';
+import { User, UserDocument } from './schema/user.schema';
+import { Model } from 'mongoose';
 import { UpdateUserDTO } from './dto/update_user.dto';
 import { SecurityService } from './../security/security.service';
 import { InjectModel } from '@nestjs/mongoose';
 import { LEVEL } from 'src/types/log.types';
 import { IInternalUser, IPlainUser, IInternalUpdate } from 'src/types/user.types';
 import { ErrorMessages } from 'src/utils/constant';
+import { validateObjectId } from 'src/utils/helper';
 
 @Injectable()
 export class UserService {
@@ -42,12 +43,8 @@ export class UserService {
   }
 
   public async getUser(userId: string): Promise<IPlainUser> {
-    if (!Types.ObjectId.isValid(userId)) {
-      this.loggerService.log(JSON.stringify({ event: 'invalid_userId', description: 'Trying to access a user with invalid user id format', level: LEVEL.WARN }));
-      throw new BadRequestException('Invalid user ID format');
-    }
-
     try {
+      validateObjectId(userId, this.loggerService);
       const user = await this.userModel.findById(userId);
       if (!user) throw new NotFoundException(`User ${userId} not found`);
       const userObject = user.toObject({ versionKey: false });
@@ -60,7 +57,7 @@ export class UserService {
     }
   }
 
-  public async findByEmailAddress(emailAddress: string): Promise<IPlainUser> {
+  public async findByEmailAddress(emailAddress: string): Promise<UserDocument> {
     try {
       const user = await this.userModel.findOne({ emailAddress });
       if (!user) throw new NotFoundException(ErrorMessages.USER_NOT_FOUND);
@@ -74,14 +71,15 @@ export class UserService {
 
   public async updateUser(payload: UpdateUserDTO, userId: string): Promise<IPlainUser> {
     try {
+      validateObjectId(userId, this.loggerService);
       const updatedUser = await this.userModel.findByIdAndUpdate(userId, payload, { new: true });
       if (!updatedUser) throw new BadRequestException('Unable to update user');
       const userObject = updatedUser.toObject({ versionKey: false });
       const { password, role, ...userWithoutPassword } = userObject;
       return userWithoutPassword as IPlainUser;
     } catch (error) {
-      if (error instanceof BadRequestException) throw error;
       this.loggerService.log(JSON.stringify({ event: 'error_updating_user', description: error.message, level: LEVEL.CRITICAL }));
+      if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
     }
   }
@@ -92,8 +90,8 @@ export class UserService {
       if (!updatedUser) throw new BadRequestException('Unable to update user');
       return;
     } catch (error) {
-      if (error instanceof BadRequestException) throw error;
       this.loggerService.log(JSON.stringify({ event: 'error_updating_sensitive_data', description: error.message, level: LEVEL.CRITICAL }));
+      if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
     }
   }
@@ -103,8 +101,8 @@ export class UserService {
     const session = await this.userModel.db.startSession();
 
     try {
+      validateObjectId(userId, this.loggerService);
       session.startTransaction();
-
       // Find and delete the user
       const user = await this.userModel.findByIdAndDelete(userId, { session });
       if (!user) {
@@ -118,6 +116,7 @@ export class UserService {
     } catch (error) {
       await session.abortTransaction();
       this.loggerService.log(JSON.stringify({ event: 'error_deleting_user', description: error.message, level: LEVEL.CRITICAL }));
+      if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
     } finally {
       await session.endSession();

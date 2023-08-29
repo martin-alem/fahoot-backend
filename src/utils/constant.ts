@@ -9,6 +9,7 @@ export enum ErrorMessages {
   UNAUTHORIZED = 'Your user is not authorized to carry out this operation',
   UPLOAD_ERROR = 'Something went wrong while uploading the file',
   FORBIDDEN = 'Your forbidden to access this resource.',
+  GOOGLE_OAUTH_FAILED = 'Unable to verify your Google account',
   TOKEN_EMAIL_MISMATCH = 'The email address on the decoded token was not the same as the one in the database',
 }
 
@@ -24,6 +25,11 @@ export enum EmailPurpose {
 
 export enum JWT_TTL {
   JWT_ACCESS_TOKEN_TTL = 84600, // in seconds = 1 day
+}
+
+export enum AuthenticationMethod {
+  MANUAL = 'manual', // email/password combination
+  GOOGLE_OAUTH = 'google_oauth', // google oauth
 }
 
 export enum EMAIL_VERIFICATION_REQUEST {
@@ -127,5 +133,21 @@ export enum DELETE_QUIZ_REQUEST {
    * 1 request in 60 seconds
    */
   LIMIT = 1,
+  TTL = 60,
+}
+
+export enum SIGNUP_REQUEST {
+  /**
+   * 10 request in 60 seconds
+   */
+  LIMIT = 10,
+  TTL = 60,
+}
+
+export enum SIGNIN_REQUEST {
+  /**
+   * 10 request in 60 seconds
+   */
+  LIMIT = 10,
   TTL = 60,
 }

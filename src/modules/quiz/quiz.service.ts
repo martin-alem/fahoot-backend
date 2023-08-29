@@ -51,7 +51,7 @@ export class QuizService {
       validateObjectId(userId, this.loggerService);
       const { page, pageSize } = pagination;
 
-      const totalQuizzes = await this.quizModel.countDocuments();
+      const totalQuizzes = await this.quizModel.countDocuments({ userId: userId });
       const totalPages = Math.ceil(totalQuizzes / pageSize);
 
       const skip = (page - 1) * pageSize;
@@ -60,7 +60,7 @@ export class QuizService {
       const sortOrder = pagination.sortOrder === 'desc' ? -1 : 1;
 
       const results = await this.quizModel
-        .find({})
+        .find({ userId: userId })
         .sort({ [sortField]: sortOrder })
         .skip(skip)
         .limit(pageSize)
@@ -74,10 +74,11 @@ export class QuizService {
     }
   }
 
-  public async updateQuiz(quizId: string, payload: Partial<CreateQuizDTO>): Promise<Quiz> {
+  public async updateQuiz(quizId: string, userId: string, payload: Partial<CreateQuizDTO>): Promise<Quiz> {
     try {
       validateObjectId(quizId, this.loggerService);
-      const updatedQuiz = await this.quizModel.findOneAndUpdate({ id: quizId }, payload, { new: true });
+      validateObjectId(userId, this.loggerService);
+      const updatedQuiz = await this.quizModel.findOneAndUpdate({ id: quizId, userId: userId }, payload, { new: true });
       if (!updatedQuiz) throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
       return updatedQuiz;
     } catch (error) {
@@ -87,10 +88,10 @@ export class QuizService {
     }
   }
 
-  public async deleteQuiz(quizId: string): Promise<void> {
+  public async deleteQuiz(quizId: string, userId: string): Promise<void> {
     try {
       validateObjectId(quizId, this.loggerService);
-      await this.quizModel.findOneAndDelete({ id: quizId });
+      await this.quizModel.findOneAndDelete({ id: quizId, userId: userId });
       return;
     } catch (error) {
       this.loggerService.log(JSON.stringify({ event: 'error_deleting_quiz', description: error.message, level: LEVEL.CRITICAL }));

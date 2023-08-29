@@ -50,6 +50,8 @@ import { RabbitMQModule } from './../rabbitmq/rabbitmq.module';
         CLIENT_API_KEY: Joi.string().required(),
         VERIFY_EMAIL_URL: Joi.string().required(),
         PASSWORD_RESET_URL: Joi.string().required(),
+        GOOGLE_CLIENT_KEY: Joi.string().required(),
+        GOOGLE_SECRET_KEY: Joi.string().required(),
       }),
     }),
 

@@ -72,7 +72,8 @@ export class QuizController {
   @Put(':quizId')
   public async updateQuiz(@Param('quizId') quizId: string, payload: Partial<CreateQuizDTO>): Promise<Quiz> {
     try {
-      const updatedQuiz = await this.quizService.updateQuiz(quizId, payload);
+      const userId = this.authService.getId();
+      const updatedQuiz = await this.quizService.updateQuiz(quizId, userId, payload);
       return updatedQuiz;
     } catch (error) {
       throw error;
@@ -86,7 +87,8 @@ export class QuizController {
   @Delete(':quizId')
   public async deleteQuiz(@Param('quizId') quizId: string): Promise<void> {
     try {
-      return await this.quizService.deleteQuiz(quizId);
+      const userId = this.authService.getId();
+      return await this.quizService.deleteQuiz(quizId, userId);
     } catch (error) {
       throw error;
     }

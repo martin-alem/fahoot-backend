@@ -1,7 +1,7 @@
 import { Schema, SchemaFactory, Prop } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 import { UserRole } from 'src/types/user.types';
-import { Status } from 'src/utils/constant';
+import { AuthenticationMethod, Status } from 'src/utils/constant';
 
 @Schema({ autoCreate: true, collection: 'users', timestamps: true })
 export class User {
@@ -16,6 +16,9 @@ export class User {
 
   @Prop({ type: String, required: false, default: null })
   password: string;
+
+  @Prop({ type: String, enum: AuthenticationMethod, required: true })
+  authenticationMethod: AuthenticationMethod;
 
   @Prop({ type: String, required: false, default: null })
   avatarUrl: string;
