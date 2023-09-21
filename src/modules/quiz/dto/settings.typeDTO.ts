@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsUrl } from 'class-validator';
+import { IsNotEmpty, IsString, IsUrl } from 'class-validator';
 
 export class SettingDTO {
   @IsNotEmpty()
@@ -12,4 +12,8 @@ export class SettingDTO {
   @IsNotEmpty()
   @IsUrl()
   gameMusic: string;
+
+  @IsNotEmpty()
+  @IsString()
+  colorLabel: string;
 }

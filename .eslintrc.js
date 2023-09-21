@@ -14,7 +14,7 @@ module.exports = {
   },
   ignorePatterns: ['.eslintrc.js'],
   rules: {
-    'prettier/prettier': ['error', { printWidth: 3500 }],
+    'prettier/prettier': ['error', { printWidth: 150 }],
     '@typescript-eslint/naming-convention': [
       'error',
       {
@@ -34,12 +34,18 @@ module.exports = {
     '@typescript-eslint/naming-convention': [
       'error',
       {
-        selector: 'default',
+        selector: 'variable',
         format: ['camelCase', 'UPPER_CASE', 'PascalCase'],
       },
       {
-        selector: 'variable',
-        format: ['camelCase', 'UPPER_CASE', 'PascalCase'],
+        selector: 'property',
+        format: ['snake_case', 'camelCase', 'PascalCase', 'SCREAMING_SNAKE_CASE'],
+        filter: {
+          // Matches either _<name>_name or NAME_NAME
+          regex: '^(_[a-z]+_[a-z]+|[A-Z]+_[A-Z]+)$',
+          match: false,
+        },
+        format: null,
       },
       {
         selector: 'function',

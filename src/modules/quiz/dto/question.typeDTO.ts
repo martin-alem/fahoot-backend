@@ -1,11 +1,16 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsNumber, IsString, IsUrl, ValidateNested } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, IsUrl, ValidateNested, IsEnum } from 'class-validator';
 import { OptionDTO } from './option.typeDTO';
+import { QuestionType } from './../../../utils/constant';
 
 export class QuestionDTO {
   @IsNotEmpty()
   @IsString()
   title: string;
+
+  @IsNotEmpty()
+  @IsEnum(QuestionType)
+  questionType: string;
 
   @IsNotEmpty()
   @ValidateNested({ each: true })

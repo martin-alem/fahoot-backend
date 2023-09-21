@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
-import { InternalServerErrorException } from '@nestjs/common';
+import { InternalServerErrorException, ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from './modules/app/app.module';
 
@@ -20,6 +20,13 @@ async function bootstrap(): Promise<void> {
     credentials: true, // include this line to allow cookies
     allowedHeaders: ['Access-Control-Allow-Origin', 'Content-Type', 'Authorization'], // Allow necessary headers
   });
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      disableErrorMessages: process.env.NODE_ENV === 'production' ? true : false,
+    }),
+  );
   await app.listen(3000);
 }
 bootstrap().catch((error) => console.error(error));

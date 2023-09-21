@@ -33,6 +33,7 @@ export class LoggerService implements OnModuleInit {
   private processLogMessage(msg: ConsumeMessage): void {
     const log = JSON.parse(msg.content.toString());
     this.LogModel.create(log).catch((error) => console.error('Error processing log message:', error));
+    this.channel.ack(msg);
   }
 
   public async getLogs(filterOption: Partial<FilterDTO>, pagination: PaginationOptions): Promise<PaginationResult<Log>> {

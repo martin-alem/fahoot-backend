@@ -1,29 +1,35 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { BadRequestException, Inject, Injectable, InternalServerErrorException, NotFoundException, forwardRef } from '@nestjs/common';
-import { LoggerService } from './../logger/logger.service';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { User, UserDocument } from './schema/user.schema';
-import { Model } from 'mongoose';
+import { ClientSession, Model } from 'mongoose';
 import { UpdateUserDTO } from './dto/update_user.dto';
 import { SecurityService } from './../security/security.service';
 import { InjectModel } from '@nestjs/mongoose';
-import { LEVEL } from 'src/types/log.types';
-import { IInternalUser, IPlainUser, IInternalUpdate } from 'src/types/user.types';
-import { ErrorMessages } from 'src/utils/constant';
-import { validateObjectId } from 'src/utils/helper';
+import { IInternalUser, IInternalUpdate } from './../../types/user.types';
+import { ErrorMessages } from './../../utils/constant';
+import { validateObjectId } from './../../utils/helper';
+import { TransactionManager } from '../shared/transaction.manager';
 
 @Injectable()
 export class UserService {
-  private readonly loggerService: LoggerService;
   private readonly securityService: SecurityService;
   private readonly userModel: Model<User>;
+  private readonly transactionManager: TransactionManager;
 
-  constructor(loggerService: LoggerService, @Inject(forwardRef(() => SecurityService)) securityService: SecurityService, @InjectModel(User.name) userModel: Model<User>) {
-    this.loggerService = loggerService;
+  constructor(securityService: SecurityService, @InjectModel(User.name) userModel: Model<User>, transactionManager: TransactionManager) {
     this.securityService = securityService;
     this.userModel = userModel;
+    this.transactionManager = transactionManager;
   }
 
-  public async createUser(payload: IInternalUser): Promise<IPlainUser> {
+  /**
+   * Create a new user. It checks if the user's email address is not already existing.
+   * @param payload user payload
+   * @param session mongodb session used for transaction
+   * @returns a promise that resolves with a user document
+   * @throws BadRequestException if user email already exist
+   * @throws InternalServerErrorException if an unknown error occurs
+   */
+  public async createUser(payload: IInternalUser, session?: ClientSession): Promise<UserDocument> {
     try {
       const userExist = await this.userModel.findOne({ emailAddress: payload.emailAddress });
       if (userExist) throw new BadRequestException(`User ${payload.emailAddress} already exist`);
@@ -31,32 +37,46 @@ export class UserService {
       if (payload.password) {
         hashedPassword = await this.securityService.hash(payload.password);
       }
-      const user = await this.userModel.create({ ...payload, password: hashedPassword });
-      const userObject = user.toObject({ versionKey: false });
-      const { password, role, ...userWithoutPassword } = userObject;
-      return userWithoutPassword as IPlainUser;
+
+      /**
+       * Using an array as the first argument in userModel.create() because when using transactions
+       * MongoDB expects an array of documents. We extract the first element afterwards since we're only interested in a single user.
+       */
+      const user = await this.userModel.create([{ ...payload, password: hashedPassword }], { session: session });
+      return user[0];
     } catch (error) {
       if (error instanceof BadRequestException) throw error;
-      this.loggerService.log(JSON.stringify({ event: 'error_creating_user', description: error.message, level: LEVEL.CRITICAL }));
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
     }
   }
 
-  public async getUser(userId: string): Promise<IPlainUser> {
+  /**
+   * Gets user with a specific id
+   * @param userId user id
+   * @returns a promise that resolves with a user document
+   * @throws BadRequestException if user id is invalid
+   * @throws NotFoundException if user id is not found
+   * @throws InternalServerErrorException if an unknown error occurs
+   */
+  public async getUser(userId: string): Promise<UserDocument> {
     try {
-      validateObjectId(userId, this.loggerService);
+      validateObjectId(userId);
       const user = await this.userModel.findById(userId);
       if (!user) throw new NotFoundException(`User ${userId} not found`);
-      const userObject = user.toObject({ versionKey: false });
-      const { password, role, ...userWithoutPassword } = userObject;
-      return userWithoutPassword as IPlainUser;
+      return user;
     } catch (error) {
       if (error instanceof BadRequestException || error instanceof NotFoundException) throw error;
-      this.loggerService.log(JSON.stringify({ event: 'error_getting_user', description: error.message, level: LEVEL.CRITICAL }));
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
     }
   }
 
+  /**
+   * Finds a user by email
+   * @param emailAddress user email address
+   * @returns a promise that resolves with a user document
+   * @throws NotFoundException when user can't be found
+   * @throws InternalServerErrorException if an unknown error occurs
+   */
   public async findByEmailAddress(emailAddress: string): Promise<UserDocument> {
     try {
       const user = await this.userModel.findOne({ emailAddress });
@@ -64,62 +84,77 @@ export class UserService {
       return user;
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      this.loggerService.log(JSON.stringify({ event: 'error_getting_user_by_email', description: error.message, level: LEVEL.CRITICAL }));
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
     }
   }
 
-  public async updateUser(payload: UpdateUserDTO, userId: string): Promise<IPlainUser> {
+  /**
+   * Updates an existing user document with the payload. Takes an optional session if this method will be used within a transaction
+   * @param payload update payload
+   * @param userId user id
+   * @param session mongodb session
+   * @returns a promise that resolves with a user document
+   * @throws BadRequestException if user id is invalid or update was not successful
+   * @throws InternalServerErrorException if an unknown error occurs
+   */
+  public async updateUser(payload: UpdateUserDTO, userId: string, session?: ClientSession): Promise<UserDocument> {
     try {
-      validateObjectId(userId, this.loggerService);
-      const updatedUser = await this.userModel.findByIdAndUpdate(userId, payload, { new: true });
+      validateObjectId(userId);
+      const updatedUser = await this.userModel.findByIdAndUpdate(userId, payload, { new: true, session: session });
       if (!updatedUser) throw new BadRequestException('Unable to update user');
-      const userObject = updatedUser.toObject({ versionKey: false });
-      const { password, role, ...userWithoutPassword } = userObject;
-      return userWithoutPassword as IPlainUser;
+      return updatedUser;
     } catch (error) {
-      this.loggerService.log(JSON.stringify({ event: 'error_updating_user', description: error.message, level: LEVEL.CRITICAL }));
       if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
     }
   }
 
-  public async updateSensitiveData(payload: IInternalUpdate, emailAddress: string): Promise<void> {
+  /**
+   * Updates sensitive information about the user like verified status, password, role, etc. Takes in an optional session parameter if this method will be used in a transaction
+   * @param payload user payload
+   * @param emailAddress email address
+   * @param session mongodb session
+   * @returns a promise that resolves to void
+   * @throws BadRequestException if update was not successful
+   * @throws InternalServerErrorException if an unknown error occurs
+   */
+  public async updateSensitiveData(payload: IInternalUpdate, emailAddress: string, session?: ClientSession): Promise<void> {
     try {
-      const updatedUser = await this.userModel.findOneAndUpdate({ emailAddress: emailAddress }, payload, { new: true });
+      const updatedUser = await this.userModel.findOneAndUpdate({ emailAddress: emailAddress }, payload, { new: true, session: session });
       if (!updatedUser) throw new BadRequestException('Unable to update user');
       return;
     } catch (error) {
-      this.loggerService.log(JSON.stringify({ event: 'error_updating_sensitive_data', description: error.message, level: LEVEL.CRITICAL }));
       if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
     }
   }
 
-  public async deleteUser(userId: string): Promise<void> {
-    // Start a new session for the transaction
-    const session = await this.userModel.db.startSession();
-
+  /**
+   * Deletes a user and all related data using transactions. Takes an optional session parameter if this method will be used in a transaction
+   * @param userId user id
+   * @param ses mongodb session
+   * @throws BadRequestException if user id is not valid
+   * @throws InternalServerErrorException if an unknown error occurs
+   */
+  public async deleteUser(userId: string, ses?: ClientSession): Promise<void> {
+    let session = null;
     try {
-      validateObjectId(userId, this.loggerService);
-      session.startTransaction();
-      // Find and delete the user
-      const user = await this.userModel.findByIdAndDelete(userId, { session });
-      if (!user) {
-        throw new NotFoundException(`User ${userId} not found`);
+      if (ses) {
+        session = ses;
+      } else {
+        session = await this.transactionManager.startSession();
       }
-
-      // In the future, you can add more steps here, like deleting quizzes
-      // e.g., await this.quizModel.deleteMany({ userId: userId }, { session });
-
-      await session.commitTransaction();
+      validateObjectId(userId);
+      await this.transactionManager.startTransaction();
+      await this.userModel.findByIdAndDelete(userId, { session: session });
+      await this.transactionManager.commitTransaction();
+      return;
     } catch (error) {
-      await session.abortTransaction();
-      this.loggerService.log(JSON.stringify({ event: 'error_deleting_user', description: error.message, level: LEVEL.CRITICAL }));
+      await this.transactionManager.abortTransaction();
       if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
     } finally {
-      await session.endSession();
+      await this.transactionManager.endSession();
     }
   }
 }

@@ -1,10 +1,12 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Channel, ConsumeMessage } from 'amqplib';
 import { RabbitMQService } from './../rabbitmq/rabbitmq.service';
-import nodemailer from 'nodemailer';
+import * as nodemailer from 'nodemailer';
 import { ConfigService } from '@nestjs/config';
 import { LoggerService } from './../logger/logger.service';
-import { IEmailOption, INotification, NotificationType } from 'src/types/notification.type';
+import { IEmailOption, INotification, NotificationType } from './../../types/notification.type';
+import { log } from './../../utils/helper';
+import { LEVEL } from './../../types/log.types';
 
 @Injectable()
 export class NotificationService implements OnModuleInit {
@@ -35,6 +37,7 @@ export class NotificationService implements OnModuleInit {
     const { to, subject, message } = payload;
     const transporter = nodemailer.createTransport({
       service: 'gmail',
+      secure: false,
       auth: {
         user: this.configService.get<string>('GMAIL_EMAIL'),
         pass: this.configService.get<string>('GMAIL_PASSWORD'),
@@ -42,27 +45,20 @@ export class NotificationService implements OnModuleInit {
     });
 
     const mailOptions = {
-      from: this.configService.get<string>('GMAIL'),
+      from: {
+        name: 'Fahoot',
+        address: this.configService.get<string>('GMAIL') ?? 'alemajohmartin@gmail.com',
+      },
       to: to,
       subject: subject,
-      text: message,
+      html: message,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
-        this.loggerService.log(
-          JSON.stringify({
-            event: 'send_email_error',
-            description: info.response,
-          }),
-        );
+        log(this.loggerService, 'send_email_error', error.message);
       } else {
-        this.loggerService.log(
-          JSON.stringify({
-            event: 'send_email_success',
-            description: info.response,
-          }),
-        );
+        log(this.loggerService, 'send_email_success', info.messageId, undefined, LEVEL.INFO);
       }
     });
   }
@@ -72,5 +68,6 @@ export class NotificationService implements OnModuleInit {
     if (message.type === NotificationType.EMAIL) {
       this.sendEmail(message.payload as IEmailOption);
     }
+    this.channel.ack(msg);
   }
 }

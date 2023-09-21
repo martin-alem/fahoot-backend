@@ -1,5 +1,5 @@
 import { IsEmail, IsEnum, IsNotEmpty, IsString } from 'class-validator';
-import { EmailPurpose } from 'src/utils/constant';
+import { EmailPurpose } from './../../../utils/constant';
 
 export class VerificationLinkDTO {
   @IsNotEmpty()

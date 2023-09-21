@@ -1,5 +1,5 @@
 import { IsEmail, IsEnum, IsNotEmpty, IsString } from 'class-validator';
-import { AuthenticationMethod } from 'src/utils/constant';
+import { AuthenticationMethod } from './../../../utils/constant';
 
 export class SignUpDTO {
   @IsNotEmpty()

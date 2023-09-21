@@ -23,6 +23,7 @@ export interface IInternalUser {
 }
 
 export interface IInternalUpdate {
+  emailAddress?: string;
   password?: string;
   verified?: boolean;
   status?: Status;

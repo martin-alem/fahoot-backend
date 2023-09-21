@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from './../types/user.types';
 import { Status } from './../utils/constant';
-import { AuthService } from 'src/modules/shared/auth.service';
+import { AuthService } from './../modules/shared/auth.service';
 
 @Injectable()
 export class AuthorizationGuard implements CanActivate {
@@ -17,10 +17,9 @@ export class AuthorizationGuard implements CanActivate {
     const role = this.reflector.get<UserRole>('role', context.getHandler());
     const status = this.reflector.get<Status>('status', context.getHandler());
 
-    if (role && this.authService.getRole() !== role) return false;
-
-    if (status && this.authService.getStatus() !== status) return false;
-
-    return true;
+    if (!role && !status) return true;
+    else if (role && !status) return this.authService.getRole() == role;
+    else if (this.authService.getRole() == role && this.authService.getStatus() == status) return true;
+    return false;
   }
 }

@@ -11,7 +11,7 @@ export class PaginationDTO {
 
   @IsString()
   @IsOptional()
-  @IsIn(['createdAt'])
+  @IsIn(['published', 'draft'])
   sortField: string;
 
   @IsString()

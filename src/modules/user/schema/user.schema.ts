@@ -1,9 +1,9 @@
 import { Schema, SchemaFactory, Prop } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import { UserRole } from 'src/types/user.types';
-import { AuthenticationMethod, Status } from 'src/utils/constant';
+import { UserRole } from '../../../types/user.types';
+import { AuthenticationMethod, CollectName, Status } from '../../../utils/constant';
 
-@Schema({ autoCreate: true, collection: 'users', timestamps: true })
+@Schema({ autoCreate: true, collection: CollectName.USER, timestamps: true })
 export class User {
   @Prop({ type: String, required: true, lowercase: true })
   firstName: string;

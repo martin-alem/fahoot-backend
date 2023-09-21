@@ -1,8 +1,8 @@
 import { BadRequestException, ForbiddenException, Injectable, NestMiddleware, NotFoundException } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { SecurityService } from 'src/modules/security/security.service';
-import { AuthService } from 'src/modules/shared/auth.service';
-import { UserService } from 'src/modules/user/user.service';
+import { SecurityService } from './../modules/security/security.service';
+import { AuthService } from './../modules/shared/auth.service';
+import { UserService } from './../modules/user/user.service';
 
 @Injectable()
 export class AuthenticationMiddleware implements NestMiddleware {

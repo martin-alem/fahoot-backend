@@ -2,6 +2,8 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, SchemaTypes, Types } from 'mongoose';
 import { Question, QuestionSchema } from './question.schemaType';
 import { SettingSchema, Settings } from './setting.schemaType';
+import { arrayLimitValidator } from './../../../utils/helper';
+import { MAX_QUESTION_PER_QUIZ, QuizStatus } from './../../../utils/constant';
 
 @Schema({ autoCreate: true, collection: 'quizzes', timestamps: true })
 export class Quiz {
@@ -11,7 +13,10 @@ export class Quiz {
   @Prop({ type: SchemaTypes.ObjectId, required: true })
   userId: Types.ObjectId;
 
-  @Prop({ type: [QuestionSchema], required: true })
+  @Prop({ type: String, enum: QuizStatus, required: false, default: QuizStatus.DRAFT })
+  status: string;
+
+  @Prop({ type: [QuestionSchema], required: true, validate: [arrayLimitValidator(MAX_QUESTION_PER_QUIZ)] })
   questions: Question[];
 
   @Prop({ type: SettingSchema, required: true })

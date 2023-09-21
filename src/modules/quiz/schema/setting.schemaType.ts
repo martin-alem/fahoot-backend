@@ -9,6 +9,9 @@ export class Settings {
 
   @Prop({ type: String, required: false, default: null })
   gameMusic: string;
+
+  @Prop({ type: String, required: false, default: null })
+  colorLabel: string;
 }
 
 export const SettingSchema = SchemaFactory.createForClass(Settings);

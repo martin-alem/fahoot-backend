@@ -1,33 +1,44 @@
-import { Body, Controller, Delete, Get, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Patch, Req, UseGuards, UseInterceptors } from '@nestjs/common';
 import { UserService } from './user.service';
 import { Throttle } from '@nestjs/throttler';
+import { Request } from 'express';
 import { UpdateUserDTO } from './dto/update_user.dto';
 import { AuthService } from '../shared/auth.service';
-import { Active, Role } from 'src/decorator/auth.decorator';
-import { AuthorizationGuard } from 'src/guard/auth.guard';
-import { DELETE_USER_REQUEST, GET_USER_REQUEST, Status, UPDATE_USER_REQUEST } from 'src/utils/constant';
-import { IPlainUser, UserRole } from 'src/types/user.types';
+import { Active, Role } from './../../decorator/auth.decorator';
+import { AuthorizationGuard } from './../../guard/auth.guard';
+import { DELETE_USER_REQUEST, GET_USER_REQUEST, Status, UPDATE_USER_REQUEST } from './../../utils/constant';
+import { UserRole } from './../../types/user.types';
+import { LoggerService } from '../logger/logger.service';
+import { log } from './../../utils/helper';
+import { LEVEL } from './../../types/log.types';
+import { UserDocument } from './schema/user.schema';
+import { ResponseInterceptor } from './../../interceptor/response.interceptor';
+import { UserShape } from '../authentication/response/UserShape';
 
 @Controller('user')
 export class UserController {
   private readonly userService: UserService;
   private readonly authService: AuthService;
+  private readonly loggerService: LoggerService;
 
-  constructor(userService: UserService, authService: AuthService) {
+  constructor(userService: UserService, authService: AuthService, loggerService: LoggerService) {
     this.userService = userService;
     this.authService = authService;
+    this.loggerService = loggerService;
   }
 
   @Throttle(GET_USER_REQUEST.LIMIT, GET_USER_REQUEST.TTL)
   @Role(UserRole.USER)
   @UseGuards(AuthorizationGuard)
+  @UseInterceptors(new ResponseInterceptor(UserShape))
   @Get()
-  public async getUser(): Promise<IPlainUser> {
+  public async getUser(@Req() request: Request): Promise<UserDocument> {
     try {
       const id = this.authService.getId();
       const user = await this.userService.getUser(id);
       return user;
     } catch (error) {
+      log(this.loggerService, 'get_user_error', error.message, request, LEVEL.CRITICAL);
       throw error;
     }
   }
@@ -36,13 +47,15 @@ export class UserController {
   @Role(UserRole.USER)
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
+  @UseInterceptors(new ResponseInterceptor(UserShape))
   @Patch()
-  public async updateUser(@Body() payload: UpdateUserDTO): Promise<IPlainUser> {
+  public async updateUser(@Body() payload: UpdateUserDTO, @Req() request: Request): Promise<UserDocument> {
     try {
       const id = this.authService.getId();
       const updatedUser = await this.userService.updateUser(payload, id);
       return updatedUser;
     } catch (error) {
+      log(this.loggerService, 'update_user_error', error.message, request, LEVEL.CRITICAL);
       throw error;
     }
   }
@@ -51,11 +64,12 @@ export class UserController {
   @Role(UserRole.USER)
   @UseGuards(AuthorizationGuard)
   @Delete()
-  public async deleteUser(): Promise<void> {
+  public async deleteUser(@Req() request: Request): Promise<void> {
     try {
       const id = this.authService.getId();
       return await this.userService.deleteUser(id);
     } catch (error) {
+      log(this.loggerService, 'update_user_error', error.message, request, LEVEL.CRITICAL);
       throw error;
     }
   }

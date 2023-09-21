@@ -1,6 +1,7 @@
 export enum ErrorMessages {
   EMAIL_NOT_FOUND = 'User with provided email address was not found',
   INVALID_LOGIN = 'Invalid email or password',
+  INVALID_REQUEST = 'Invalid request',
   ACCOUNT_INACTIVE = 'Your account is either suspended, deactivated, or has been terminated. Please contact support for more information.',
   INTERNAL_ERROR = 'Something went wrong. Please try again later',
   USER_NOT_FOUND = 'User with provided id not found',
@@ -13,9 +14,28 @@ export enum ErrorMessages {
   TOKEN_EMAIL_MISMATCH = 'The email address on the decoded token was not the same as the one in the database',
 }
 
+export const MAX_QUESTION_PER_QUIZ = 500;
+
+export enum QuizStatus {
+  PUBLISHED = 'published',
+  DRAFT = 'draft',
+}
+
+export enum CollectName {
+  USER = 'users',
+  PLAYER = 'players',
+  QUIZ = 'quizzes',
+  PLAY = 'plays',
+}
+
 export enum Status {
   ACTIVE = 'active',
   INACTIVE = 'inactive',
+}
+
+export enum QuestionType {
+  BOOLEAN = 'boolean',
+  MCQ = 'mcq',
 }
 
 export enum EmailPurpose {
@@ -24,7 +44,12 @@ export enum EmailPurpose {
 }
 
 export enum JWT_TTL {
-  JWT_ACCESS_TOKEN_TTL = 84600, // in seconds = 1 day
+  ACCESS_TOKEN_TTL = 3600, // in seconds = 1 hour
+  REFRESH_TOKEN_TTL = 86400, // in seconds = 24 hours
+}
+
+export enum VERIFICATION_TOKEN_TTL {
+  TTL = 86400, // in seconds = 24 hours
 }
 
 export enum AuthenticationMethod {
