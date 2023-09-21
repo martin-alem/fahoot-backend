@@ -14,6 +14,7 @@ import { AuthService } from '../shared/auth.service';
 import { LoggerService } from '../logger/logger.service';
 import { LEVEL } from './../../types/log.types';
 import { log } from './../../utils/helper';
+import { DeleteQuizzesDTO } from './dto/delete_quizzes.dto';
 
 @Controller('quiz')
 export class QuizController {
@@ -100,7 +101,7 @@ export class QuizController {
       const userId = this.authService.getId();
       return await this.quizService.deleteQuiz(quizId, userId);
     } catch (error) {
-      log(this.loggerService, 'update_quiz_error', error.message, request, LEVEL.CRITICAL);
+      log(this.loggerService, 'delete_one_quiz_error', error.message, request, LEVEL.CRITICAL);
       throw error;
     }
   }
@@ -109,13 +110,13 @@ export class QuizController {
   @Role(UserRole.USER)
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
-  @Delete('/all_quizzes')
-  public async deleteAllQuizzes(@Req() request: Request): Promise<void> {
+  @Delete('/quizzes')
+  public async deleteAllQuizzes(@Body() payload: DeleteQuizzesDTO, @Req() request: Request): Promise<void> {
     try {
       const userId = this.authService.getId();
-      return await this.quizService.deleteAllQuizzes(userId);
+      return await this.quizService.deleteQuizzes(userId, payload.quizId);
     } catch (error) {
-      log(this.loggerService, 'update_quiz_error', error.message, request, LEVEL.CRITICAL);
+      log(this.loggerService, 'delete_many_quizzes_error', error.message, request, LEVEL.CRITICAL);
       throw error;
     }
   }

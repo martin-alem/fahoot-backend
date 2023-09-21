@@ -150,7 +150,7 @@ export class QuizService {
    * @param ses mongoose session
    * @returns void
    */
-  public async deleteQuizzes(userId: string, quizId: string[], ses: ClientSession): Promise<void> {
+  public async deleteQuizzes(userId: string, quizId: string[], ses?: ClientSession): Promise<void> {
     let session = null;
     try {
       if (ses) {

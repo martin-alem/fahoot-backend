@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import { InternalServerErrorException, ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from './modules/app/app.module';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
@@ -27,6 +28,10 @@ async function bootstrap(): Promise<void> {
       disableErrorMessages: process.env.NODE_ENV === 'production' ? true : false,
     }),
   );
+
+  const config = new DocumentBuilder().setTitle('Fahoot API').setDescription('Fahoot API documentation').setVersion('1.0').addTag('Fahoot').build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
   await app.listen(3000);
 }
 bootstrap().catch((error) => console.error(error));
