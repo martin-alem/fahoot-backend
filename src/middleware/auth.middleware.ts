@@ -17,16 +17,14 @@ export class AuthenticationMiddleware implements NestMiddleware {
   }
 
   async use(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const tokenCookie = req.cookies['_access_token'];
-
-    if (!tokenCookie) {
-      throw new ForbiddenException('Token cookie not found');
-    }
-
-    const decodedPayload = await this.securityService.validateToken(tokenCookie);
-
-    // Check if the user exists
     try {
+      const tokenCookie = req.cookies['_access_token'];
+      if (!tokenCookie) {
+        throw new ForbiddenException('Token cookie not found');
+      }
+
+      const decodedPayload = await this.securityService.validateToken(tokenCookie);
+
       const user = await this.userService.getUser(decodedPayload.id);
       if (!user) {
         throw new NotFoundException(`User ${decodedPayload.id} not found`);
@@ -37,7 +35,7 @@ export class AuthenticationMiddleware implements NestMiddleware {
       next();
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
-        throw new ForbiddenException('Invalid user');
+        throw new ForbiddenException('Invalid token or user');
       }
       throw error;
     }

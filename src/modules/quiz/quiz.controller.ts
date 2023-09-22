@@ -1,4 +1,4 @@
-import { Controller, UseGuards, Post, Get, Param, Put, Delete, Body, Req } from '@nestjs/common';
+import { Controller, UseGuards, Post, Get, Param, Put, Delete, Body, Req, Query } from '@nestjs/common';
 import { QuizService } from './quiz.service';
 import { Request } from 'express';
 import { Throttle } from '@nestjs/throttler';
@@ -14,7 +14,6 @@ import { AuthService } from '../shared/auth.service';
 import { LoggerService } from '../logger/logger.service';
 import { LEVEL } from './../../types/log.types';
 import { log } from './../../utils/helper';
-import { DeleteQuizzesDTO } from './dto/delete_quizzes.dto';
 
 @Controller('quiz')
 export class QuizController {
@@ -111,10 +110,11 @@ export class QuizController {
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
   @Delete('/quizzes')
-  public async deleteAllQuizzes(@Body() payload: DeleteQuizzesDTO, @Req() request: Request): Promise<void> {
+  public async deleteAllQuizzes(@Query('quizId') quizId: string, @Req() request: Request): Promise<void> {
     try {
       const userId = this.authService.getId();
-      return await this.quizService.deleteQuizzes(userId, payload.quizId);
+      const ids: string[] = quizId.split(',');
+      return await this.quizService.deleteQuizzes(userId, ids);
     } catch (error) {
       log(this.loggerService, 'delete_many_quizzes_error', error.message, request, LEVEL.CRITICAL);
       throw error;

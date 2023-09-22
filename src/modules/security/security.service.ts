@@ -45,7 +45,7 @@ export class SecurityService {
     try {
       const token = await this.jwtService.signAsync(
         {
-          sub: user.id,
+          id: user.id,
           emailAddress: user.emailAddress,
           role: user.role,
         },
@@ -72,12 +72,12 @@ export class SecurityService {
    */
   async validateToken(token: string): Promise<IAuthUser> {
     try {
-      const decodedToken = await this.jwtService.verify(token, {
+      const decodedToken = this.jwtService.verify<IAuthUser>(token, {
         audience: this.configService.get<string>('JWT_TOKEN_AUDIENCE'),
         issuer: this.configService.get<string>('JWT_TOKEN_ISSUER'),
         secret: this.configService.get<string>('JWT_SECRET'),
       });
-      return decodedToken as IAuthUser;
+      return decodedToken;
     } catch (error) {
       if (!(error instanceof InternalServerErrorException)) throw error;
       throw new InternalServerErrorException(error.message);

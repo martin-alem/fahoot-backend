@@ -66,7 +66,8 @@ export function clearCookie(response: Response, name: string, options: { [key: s
     secure: process.env.NODE_ENV === 'production' ? true : false,
     httpOnly: process.env.NODE_ENV === 'production' ? true : false,
     sameSite: process.env.NODE_ENV === 'production' ? true : false,
+    maxAge: 0,
   };
 
-  response.clearCookie(name, { ...defaultOptions, ...options });
+  response.cookie(name, '', { ...defaultOptions, ...options });
 }

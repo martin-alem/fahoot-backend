@@ -29,7 +29,12 @@ describe('AuthenticationMiddleware', () => {
     } as unknown as AuthService;
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [{ provide: SecurityService, useValue: mockSecurityService }, { provide: UserService, useValue: mockUserService }, { provide: AuthService, useValue: mockAuthService }, AuthenticationMiddleware],
+      providers: [
+        { provide: SecurityService, useValue: mockSecurityService },
+        { provide: UserService, useValue: mockUserService },
+        { provide: AuthService, useValue: mockAuthService },
+        AuthenticationMiddleware,
+      ],
     }).compile();
 
     middleware = module.get<AuthenticationMiddleware>(AuthenticationMiddleware);

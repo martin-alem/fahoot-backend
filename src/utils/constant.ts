@@ -15,6 +15,8 @@ export enum ErrorMessages {
 }
 
 export const MAX_QUESTION_PER_QUIZ = 500;
+export const ACCESS_TOKEN_COOKIE_NAME = '_access_token';
+export const REMEMBER_ME_COOKIE_NAME = '_remember_me_';
 
 export enum QuizStatus {
   PUBLISHED = 'published',
@@ -45,7 +47,12 @@ export enum EmailPurpose {
 
 export enum JWT_TTL {
   ACCESS_TOKEN_TTL = 3600, // in seconds = 1 hour
-  REFRESH_TOKEN_TTL = 86400, // in seconds = 24 hours
+  REMEMBER_ME_TOKEN_TTL = 86400, // in seconds = 24 hours
+}
+
+export enum COOKIE {
+  ACCESS_TOKEN_COOKIE_TTL = 3.6e6, // in milliseconds = 1 hour
+  REMEMBER_ME_COOKIE_TTL = 8.64e7, // in milliseconds = 24 hours
 }
 
 export enum VERIFICATION_TOKEN_TTL {
@@ -65,7 +72,7 @@ export enum EMAIL_VERIFICATION_REQUEST {
   TTL = 60,
 }
 
-export enum SEND_VERIFICATION_LINK_REQUEST {
+export enum SEND_VERIFICATION_EMAIL_REQUEST {
   /**
    * 5 request in 60 seconds
    */
@@ -157,7 +164,7 @@ export enum DELETE_QUIZ_REQUEST {
   /**
    * 1 request in 60 seconds
    */
-  LIMIT = 1,
+  LIMIT = 100,
   TTL = 60,
 }
 
@@ -165,11 +172,19 @@ export enum SIGNUP_REQUEST {
   /**
    * 10 request in 60 seconds
    */
-  LIMIT = 10,
+  LIMIT = 100,
   TTL = 60,
 }
 
 export enum SIGNIN_REQUEST {
+  /**
+   * 10 request in 60 seconds
+   */
+  LIMIT = 100,
+  TTL = 60,
+}
+
+export enum LOGOUT_REQUEST {
   /**
    * 10 request in 60 seconds
    */

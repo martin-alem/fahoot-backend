@@ -1,7 +1,7 @@
 import { IsEmail, IsEnum, IsNotEmpty, IsString } from 'class-validator';
 import { EmailPurpose } from './../../../utils/constant';
 
-export class VerificationLinkDTO {
+export class VerificationEmailDTO {
   @IsNotEmpty()
   @IsEmail()
   emailAddress: string;

@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SecurityController } from './security.controller';
 import { Request } from 'express';
 import { SecurityService } from './security.service';
-import { VerificationLinkDTO } from './dto/verification.dto';
+import { VerificationEmailDTO } from './dto/verification.dto';
 import { EmailPurpose } from './../../utils/constant';
 import { PasswordResetDTO } from './dto/password_reset.dto';
 import { LoggerService } from '../logger/logger.service';
@@ -61,7 +61,7 @@ describe('SecurityController', () => {
   });
 
   describe('Send Verification Email', () => {
-    const payload: VerificationLinkDTO = {
+    const payload: VerificationEmailDTO = {
       emailAddress: 'test@email.com',
       subject: 'Verify Email',
       emailPurpose: EmailPurpose.EMAIL_VERIFICATION,

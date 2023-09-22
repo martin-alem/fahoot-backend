@@ -53,10 +53,11 @@ describe('AuthenticationController', () => {
     emailAddress: 'john.deo@gmail.com',
     password: 'password',
     authenticationMethod: AuthenticationMethod.MANUAL,
+    rememberMe: true,
   };
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthenticationController],
       providers: [AuthenticationService, LoggerService, SecurityService],
@@ -149,14 +150,14 @@ describe('AuthenticationController', () => {
       mockSecurityService.generateTokens = jest.fn().mockResolvedValue('token');
       const spy = jest.spyOn(mockSecurityService, 'generateTokens');
       await controller.signin(SignInDTO, mockRequest as Request, mockResponse as Response);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
     });
 
     it('should call the setCookie method', async () => {
       mockService.signIn = jest.fn().mockResolvedValue(mockUser);
       mockSecurityService.generateTokens = jest.fn().mockResolvedValue('token');
       await controller.signin(SignInDTO, mockRequest as Request, mockResponse as Response);
-      expect(setCookie).toHaveBeenCalledTimes(1);
+      expect(setCookie).toHaveBeenCalled();
       expect(setCookie).toHaveBeenCalledWith(mockResponse, '_access_token', 'token', expect.any(Number));
     });
 

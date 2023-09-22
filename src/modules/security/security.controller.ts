@@ -1,9 +1,9 @@
 import { Body, Controller, Post, Query, Req } from '@nestjs/common';
 import { SecurityService } from './security.service';
 import { Request } from 'express';
-import { EMAIL_VERIFICATION_REQUEST, PASSWORD_RESET, PASSWORD_RESET_REQUEST, SEND_VERIFICATION_LINK_REQUEST } from './../../utils/constant';
+import { EMAIL_VERIFICATION_REQUEST, PASSWORD_RESET, PASSWORD_RESET_REQUEST, SEND_VERIFICATION_EMAIL_REQUEST } from './../../utils/constant';
 import { Throttle } from '@nestjs/throttler';
-import { VerificationLinkDTO } from './dto/verification.dto';
+import { VerificationEmailDTO } from './dto/verification.dto';
 import { PasswordResetRequestDTO } from './dto/password_reset_request.dto';
 import { PasswordResetDTO } from './dto/password_reset.dto';
 import { log } from './../../utils/helper';
@@ -32,9 +32,9 @@ export class SecurityController {
     }
   }
 
-  @Throttle(SEND_VERIFICATION_LINK_REQUEST.LIMIT, SEND_VERIFICATION_LINK_REQUEST.TTL)
-  @Post('/send_verification_link')
-  public async sendVerificationEmail(@Body() payload: VerificationLinkDTO, @Req() request: Request): Promise<void> {
+  @Throttle(SEND_VERIFICATION_EMAIL_REQUEST.LIMIT, SEND_VERIFICATION_EMAIL_REQUEST.TTL)
+  @Post('/send_verification_email')
+  public async sendVerificationEmail(@Body() payload: VerificationEmailDTO, @Req() request: Request): Promise<void> {
     try {
       const { emailAddress, subject, emailPurpose } = payload;
       await this.securityService.queueVerificationEmail(emailAddress, subject, emailPurpose);

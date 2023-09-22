@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { AuthenticationMethod } from './../../../utils/constant';
 
 export class SignInDTO {
@@ -13,4 +13,8 @@ export class SignInDTO {
   @IsNotEmpty()
   @IsEnum(AuthenticationMethod)
   authenticationMethod: AuthenticationMethod;
+
+  @IsOptional()
+  @IsBoolean()
+  rememberMe: boolean;
 }

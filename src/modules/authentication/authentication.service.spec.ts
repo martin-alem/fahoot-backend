@@ -39,6 +39,7 @@ describe('AuthenticationService', () => {
     emailAddress: 'john.deo@gmail.com',
     password: 'password',
     authenticationMethod: AuthenticationMethod.MANUAL,
+    rememberMe: false,
   };
 
   beforeEach(async () => {

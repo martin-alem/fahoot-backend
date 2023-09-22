@@ -82,7 +82,7 @@ describe('SecurityService', () => {
       expect(result).toEqual('mockToken');
       expect(mockJwtService.signAsync).toHaveBeenCalledWith(
         {
-          sub: mockUser.id,
+          id: mockUser.id,
           emailAddress: mockUser.emailAddress,
           role: mockUser.role,
         },

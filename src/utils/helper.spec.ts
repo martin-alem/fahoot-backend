@@ -86,13 +86,13 @@ describe('setCookie', () => {
   });
 });
 
-describe('clearCookie', () => {
+describe('clear Cookie', () => {
   it('should call the clearCookie method on response object with proper parameters', () => {
-    const mockResponse = { clearCookie: jest.fn() };
+    const mockResponse = { cookie: jest.fn() };
     const name = 'TestCookie';
 
     clearCookie(mockResponse as unknown as Response, name);
 
-    expect(mockResponse.clearCookie).toHaveBeenCalledWith(name, expect.any(Object));
+    expect(mockResponse.cookie).toHaveBeenCalledWith(name, expect.any(String), expect.any(Object));
   });
 });

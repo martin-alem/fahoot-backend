@@ -11,7 +11,7 @@ async function bootstrap(): Promise<void> {
   app.use(cookieParser(process.env.COOKIE_SECRET));
   app.enableCors({
     origin: function (origin, callback) {
-      const allowedOrigins = ['http://localhost:8000', 'http://localhost', 'https://fahoot.com', 'https://www.fahoot.com'];
+      const allowedOrigins = ['http://localhost:8000', 'https://fahoot.com', 'https://www.fahoot.com'];
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
