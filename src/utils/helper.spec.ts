@@ -91,7 +91,7 @@ describe('clear Cookie', () => {
     const mockResponse = { cookie: jest.fn() };
     const name = 'TestCookie';
 
-    clearCookie(mockResponse as unknown as Response, name);
+    clearCookie(mockResponse as unknown as Response, {}, name);
 
     expect(mockResponse.cookie).toHaveBeenCalledWith(name, expect.any(String), expect.any(Object));
   });

@@ -127,12 +127,12 @@ export class AuthenticationController {
   @Throttle(LOGOUT_REQUEST.LIMIT, LOGOUT_REQUEST.TTL)
   @Delete('/logout')
   public logout(@Res({ passthrough: true }) response: Response): void {
-    clearCookie(response, ACCESS_TOKEN_COOKIE_NAME);
+    clearCookie(response, {}, ACCESS_TOKEN_COOKIE_NAME);
   }
 
   @Throttle(LOGOUT_REQUEST.LIMIT, LOGOUT_REQUEST.TTL)
   @Delete('/remember_me')
   public clearRememberMe(@Res({ passthrough: true }) response: Response): void {
-    clearCookie(response, REMEMBER_ME_COOKIE_NAME);
+    clearCookie(response, {}, REMEMBER_ME_COOKIE_NAME);
   }
 }

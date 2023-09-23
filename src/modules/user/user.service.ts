@@ -80,10 +80,10 @@ export class UserService {
   public async findByEmailAddress(emailAddress: string): Promise<UserDocument> {
     try {
       const user = await this.userModel.findOne({ emailAddress });
-      if (!user) throw new NotFoundException(ErrorMessages.USER_NOT_FOUND);
+      if (!user) throw new BadRequestException(ErrorMessages.USER_NOT_FOUND);
       return user;
     } catch (error) {
-      if (error instanceof NotFoundException) throw error;
+      if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
     }
   }

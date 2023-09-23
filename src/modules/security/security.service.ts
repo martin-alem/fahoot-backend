@@ -1,4 +1,4 @@
-import { Inject, Injectable, InternalServerErrorException, UnauthorizedException, forwardRef } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, InternalServerErrorException, UnauthorizedException, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -11,6 +11,7 @@ import { IAuthUser, UserRole } from './../../types/user.types';
 import { EmailPurpose, ErrorMessages, JWT_TTL, Status } from './../../utils/constant';
 import { NotificationType } from './../../types/notification.type';
 import { createEmailVerificationTemplate, createPasswordResetTemplate } from '../../utils/email_templates';
+import { validateObjectId } from './../../utils/helper';
 
 @Injectable()
 export class SecurityService {
@@ -204,6 +205,45 @@ export class SecurityService {
     try {
       const decodedToken = await this.verifyToken(token);
       await this.userService.updateSensitiveData({ verified: true, status: Status.ACTIVE }, decodedToken.emailAddress);
+      return;
+    } catch (error) {
+      if (!(error instanceof InternalServerErrorException)) throw error;
+      throw new InternalServerErrorException(error.message);
+    }
+  }
+
+  /**
+   * Handles a request to change a user's password
+   * @param oldPassword old password
+   * @param newPassword new password
+   * @param userId user id
+   * @throws InternalServerErrorException if an unknown error occurred and specific errors. check nested methods for more information.
+   */
+  public async updatePassword(oldPassword: string, newPassword: string, userId: string): Promise<void> {
+    try {
+      validateObjectId(userId);
+      const user = await this.userService.getUser(userId);
+      if (!user) throw new UnauthorizedException(ErrorMessages.UNAUTHORIZED);
+      const validPassword = await this.compare(oldPassword, user.password);
+      if (!validPassword) throw new BadRequestException(ErrorMessages.INVALID_REQUEST);
+      const hashedPassword = await this.hash(newPassword);
+      await this.userService.updateSensitiveData({ password: hashedPassword }, user.emailAddress);
+      return;
+    } catch (error) {
+      if (!(error instanceof InternalServerErrorException)) throw error;
+      throw new InternalServerErrorException(error.message);
+    }
+  }
+
+  public async updateEmail(newEmailAddress: string, userId: string): Promise<void> {
+    try {
+      validateObjectId(userId);
+      const user = await this.userService.getUser(userId);
+      if (!user) throw new UnauthorizedException(ErrorMessages.UNAUTHORIZED);
+      const checkNewEmail = await this.userService.findByEmailAddress(newEmailAddress);
+      if (checkNewEmail) throw new BadRequestException(ErrorMessages.INVALID_REQUEST);
+      await this.userService.updateSensitiveData({ emailAddress: newEmailAddress }, user.emailAddress);
+      await this.queueVerificationEmail(newEmailAddress, 'Verify Email', EmailPurpose.EMAIL_VERIFICATION);
       return;
     } catch (error) {
       if (!(error instanceof InternalServerErrorException)) throw error;

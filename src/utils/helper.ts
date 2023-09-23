@@ -61,7 +61,7 @@ export function setCookie(response: Response, name: string, value: string, ttl: 
  * @param name cookie name
  * @param options cookie options
  */
-export function clearCookie(response: Response, name: string, options: { [key: string]: string } = {}): void {
+export function clearCookie(response: Response, options: { [key: string]: string } = {}, ...names: string[]): void {
   const defaultOptions = {
     secure: process.env.NODE_ENV === 'production' ? true : false,
     httpOnly: process.env.NODE_ENV === 'production' ? true : false,
@@ -69,5 +69,7 @@ export function clearCookie(response: Response, name: string, options: { [key: s
     maxAge: 0,
   };
 
-  response.cookie(name, '', { ...defaultOptions, ...options });
+  for (const name of names) {
+    response.cookie(name, '', { ...defaultOptions, ...options });
+  }
 }

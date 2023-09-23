@@ -6,6 +6,7 @@ import { VerificationEmailDTO } from './dto/verification.dto';
 import { EmailPurpose } from './../../utils/constant';
 import { PasswordResetDTO } from './dto/password_reset.dto';
 import { LoggerService } from '../logger/logger.service';
+import { AuthService } from '../shared/auth.service';
 
 describe('SecurityController', () => {
   let controller: SecurityController;
@@ -15,6 +16,8 @@ describe('SecurityController', () => {
     passwordResetRequest: jest.fn(),
     passwordReset: jest.fn(),
   };
+
+  const mockAuthService = {};
 
   const mockLoggerService = {
     log: jest.fn(),
@@ -31,6 +34,7 @@ describe('SecurityController', () => {
       providers: [
         { provide: SecurityService, useValue: mockService },
         { provide: LoggerService, useValue: mockLoggerService },
+        { provide: AuthService, useValue: mockAuthService },
       ],
     }).compile();
 

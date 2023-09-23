@@ -175,7 +175,7 @@ describe('UserService', () => {
 
     it('should throw a NotFoundException if email does not exist', async () => {
       mockUserModel.findOne = jest.fn().mockResolvedValue(null);
-      await expect(service.findByEmailAddress('john@gmail.com')).rejects.toThrow(NotFoundException);
+      await expect(service.findByEmailAddress('john@gmail.com')).rejects.toThrow(BadRequestException);
     });
 
     it('should throw a InternalServerErrorException if error occurs in findOne', async () => {

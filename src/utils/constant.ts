@@ -191,3 +191,19 @@ export enum LOGOUT_REQUEST {
   LIMIT = 10,
   TTL = 60,
 }
+
+export enum UPDATE_PASSWORD_REQUEST {
+  /**
+   * 10 request in 60 seconds
+   */
+  LIMIT = 20,
+  TTL = 60,
+}
+
+export enum UPDATE_EMAIL_REQUEST {
+  /**
+   * 10 request in 60 seconds
+   */
+  LIMIT = 20,
+  TTL = 60,
+}
