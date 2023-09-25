@@ -15,6 +15,7 @@ import { APP_GUARD } from '@nestjs/core';
 import * as Joi from 'joi';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RabbitMQModule } from './../rabbitmq/rabbitmq.module';
+import { UploadModule } from '../upload/upload.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { RabbitMQModule } from './../rabbitmq/rabbitmq.module';
     AnalyticsModule,
     LoggerModule,
     RabbitMQModule,
+    UploadModule,
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema: Joi.object({
@@ -52,6 +54,11 @@ import { RabbitMQModule } from './../rabbitmq/rabbitmq.module';
         PASSWORD_RESET_URL: Joi.string().required(),
         GOOGLE_CLIENT_KEY: Joi.string().required(),
         GOOGLE_SECRET_KEY: Joi.string().required(),
+        SPACES_KEY: Joi.string().required(),
+        SPACES_SECRET: Joi.string().required(),
+        SPACES_BUCKET: Joi.string().required(),
+        SPACES_REGION: Joi.string().required(),
+        SPACES_ENDPOINT: Joi.string().required(),
       }),
     }),
 

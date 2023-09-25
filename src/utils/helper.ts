@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { Request, Response } from 'express';
+import * as crypto from 'crypto';
 import { Types } from 'mongoose';
 import { LoggerService } from './../modules/logger/logger.service';
 import { LEVEL } from './../types/log.types';
@@ -72,4 +73,9 @@ export function clearCookie(response: Response, options: { [key: string]: string
   for (const name of names) {
     response.cookie(name, '', { ...defaultOptions, ...options });
   }
+}
+
+export function generateRandomToken(): string {
+  const randomToken = crypto.randomBytes(64).toString('hex');
+  return randomToken;
 }

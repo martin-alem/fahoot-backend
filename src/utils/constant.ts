@@ -17,10 +17,17 @@ export enum ErrorMessages {
 export const MAX_QUESTION_PER_QUIZ = 500;
 export const ACCESS_TOKEN_COOKIE_NAME = '_access_token';
 export const REMEMBER_ME_COOKIE_NAME = '_remember_me_';
+export const SPACES_ROOT = 'uploads';
 
 export enum QuizStatus {
   PUBLISHED = 'published',
   DRAFT = 'draft',
+}
+
+export enum UploadDestination {
+  PROFILE = 'profile',
+  QUESTION = 'question',
+  DEFAULT = 'default',
 }
 
 export enum CollectName {
@@ -205,5 +212,13 @@ export enum UPDATE_EMAIL_REQUEST {
    * 10 request in 60 seconds
    */
   LIMIT = 20,
+  TTL = 60,
+}
+
+export enum UPLOAD_REQUEST {
+  /**
+   * 10 request in 60 seconds
+   */
+  LIMIT = 50,
   TTL = 60,
 }
