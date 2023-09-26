@@ -16,6 +16,7 @@ import * as Joi from 'joi';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RabbitMQModule } from './../rabbitmq/rabbitmq.module';
 import { UploadModule } from '../upload/upload.module';
+import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { UploadModule } from '../upload/upload.module';
       validationSchema: Joi.object({
         NODE_ENV: Joi.string().valid('development', 'production').default('development'),
         DATABASE_URL: Joi.string().required(),
+        DATABASE_NAME: Joi.string().required(),
         COOKIE_SECRET: Joi.string().required(),
         PORT: Joi.number().default(3000),
         HOST: Joi.string().default('localhost'),
@@ -65,8 +67,10 @@ import { UploadModule } from '../upload/upload.module';
     MongooseModule.forRootAsync({
       imports: [ConfigModule], // import ConfigModule
       inject: [ConfigService], // inject ConfigService
+      connectionName: DEFAULT_DATABASE_CONNECTION,
       useFactory: async (configService: ConfigService) => ({
         uri: configService.get<string>('DATABASE_URL'),
+        dbName: configService.get<string>('DATABASE_NAME'),
       }),
     }),
   ],

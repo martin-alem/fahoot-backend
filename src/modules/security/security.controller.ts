@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { SecurityService } from './security.service';
 import { Request, Response } from 'express';
 import {
@@ -40,7 +40,7 @@ export class SecurityController {
 
   @Throttle(EMAIL_VERIFICATION_REQUEST.LIMIT, EMAIL_VERIFICATION_REQUEST.TTL)
   @Post('/email_verification')
-  public async emailVerification(@Query('token') token: string, @Req() request: Request): Promise<void> {
+  public async emailVerification(@Body('token') token: string, @Req() request: Request): Promise<void> {
     try {
       await this.securityService.verifyEmail(token);
       return;
@@ -55,12 +55,17 @@ export class SecurityController {
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
   @Post('/update_password')
-  public async updatePassword(@Body() payload: UpdatePasswordDTO, @Req() request: Request, @Res() response: Response): Promise<void> {
+  public async updatePassword(
+    @Body() payload: UpdatePasswordDTO,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<void> {
     try {
       const id = this.authService.getId();
       const { oldPassword, newPassword } = payload;
       await this.securityService.updatePassword(oldPassword, newPassword, id);
       clearCookie(response, {}, ACCESS_TOKEN_COOKIE_NAME, REMEMBER_ME_COOKIE_NAME);
+      return;
     } catch (error) {
       log(this.loggerService, 'update_password_error', error.message, request, LEVEL.CRITICAL);
       throw error;
@@ -72,13 +77,19 @@ export class SecurityController {
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
   @Post('/update_email')
-  public async updateEmailAddress(@Body() payload: UpdateEmailDTO, @Req() request: Request, @Res() response: Response): Promise<void> {
+  public async updateEmailAddress(
+    @Body() payload: UpdateEmailDTO,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<void> {
     try {
       const id = this.authService.getId();
       const { emailAddress } = payload;
       await this.securityService.updateEmail(emailAddress, id);
       clearCookie(response, {}, ACCESS_TOKEN_COOKIE_NAME, REMEMBER_ME_COOKIE_NAME);
+      return;
     } catch (error) {
+      console.error(error);
       log(this.loggerService, 'update_email_error', error.message, request, LEVEL.CRITICAL);
       throw error;
     }

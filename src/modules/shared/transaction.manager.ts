@@ -1,12 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import mongoose, { ClientSession } from 'mongoose';
+import { InjectConnection } from '@nestjs/mongoose';
+import { ClientSession, Connection } from 'mongoose';
+import { DEFAULT_DATABASE_CONNECTION } from 'src/utils/constant';
 
 @Injectable()
 export class TransactionManager {
   private session: ClientSession;
+  private readonly connection: Connection;
 
+  constructor(@InjectConnection(DEFAULT_DATABASE_CONNECTION) connection: Connection) {
+    this.connection = connection;
+  }
   async startSession(): Promise<ClientSession> {
-    this.session = await mongoose.startSession();
+    this.session = await this.connection.startSession();
     return this.session;
   }
   async startTransaction(): Promise<void> {

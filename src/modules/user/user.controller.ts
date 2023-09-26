@@ -67,7 +67,8 @@ export class UserController {
   public async deleteUser(@Req() request: Request): Promise<void> {
     try {
       const id = this.authService.getId();
-      return await this.userService.deleteUser(id);
+      await this.userService.deleteUser(id);
+      return;
     } catch (error) {
       log(this.loggerService, 'update_user_error', error.message, request, LEVEL.CRITICAL);
       throw error;

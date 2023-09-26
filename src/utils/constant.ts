@@ -18,6 +18,7 @@ export const MAX_QUESTION_PER_QUIZ = 500;
 export const ACCESS_TOKEN_COOKIE_NAME = '_access_token';
 export const REMEMBER_ME_COOKIE_NAME = '_remember_me_';
 export const SPACES_ROOT = 'uploads';
+export const DEFAULT_DATABASE_CONNECTION = 'fahoot_database_connection';
 
 export enum QuizStatus {
   PUBLISHED = 'published',

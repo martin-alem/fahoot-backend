@@ -8,7 +8,7 @@ import { Token } from './schema/tokens.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { UserService } from './../user/user.service';
 import { IAuthUser, UserRole } from './../../types/user.types';
-import { EmailPurpose, ErrorMessages, JWT_TTL, Status } from './../../utils/constant';
+import { DEFAULT_DATABASE_CONNECTION, EmailPurpose, ErrorMessages, JWT_TTL, Status } from './../../utils/constant';
 import { NotificationType } from './../../types/notification.type';
 import { createEmailVerificationTemplate, createPasswordResetTemplate } from '../../utils/email_templates';
 import { validateObjectId } from './../../utils/helper';
@@ -26,7 +26,7 @@ export class SecurityService {
     configService: ConfigService,
     @Inject(forwardRef(() => UserService)) userService: UserService,
     notificationService: NotificationService,
-    @InjectModel(Token.name) tokenModel: Model<Token>,
+    @InjectModel(Token.name, DEFAULT_DATABASE_CONNECTION) tokenModel: Model<Token>,
   ) {
     this.jwtService = jwtService;
     this.configService = configService;
@@ -147,7 +147,7 @@ export class SecurityService {
       let message = '';
       const token = await this.generateTokens({ id: '', emailAddress: emailAddress, role: UserRole.USER }, JWT_TTL.ACCESS_TOKEN_TTL);
 
-      const newToken = await this.tokenModel.create({ token: token, emailAddress: emailAddress });
+      const newToken = await this.tokenModel.updateOne({ emailAddress: emailAddress }, { token: token }, { upsert: true });
 
       if (!newToken) throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
 
@@ -183,6 +183,7 @@ export class SecurityService {
    */
   private async verifyToken(token: string): Promise<IAuthUser> {
     try {
+      console.log('Verifying token', token);
       const tokenExist = await this.tokenModel.findOne({ token: token });
       if (!tokenExist) throw new UnauthorizedException(ErrorMessages.UNAUTHORIZED);
       const decodedToken = await this.validateToken(token);
@@ -240,12 +241,16 @@ export class SecurityService {
       validateObjectId(userId);
       const user = await this.userService.getUser(userId);
       if (!user) throw new UnauthorizedException(ErrorMessages.UNAUTHORIZED);
-      const checkNewEmail = await this.userService.findByEmailAddress(newEmailAddress);
-      if (checkNewEmail) throw new BadRequestException(ErrorMessages.INVALID_REQUEST);
-      await this.userService.updateSensitiveData({ emailAddress: newEmailAddress }, user.emailAddress);
-      await this.queueVerificationEmail(newEmailAddress, 'Verify Email', EmailPurpose.EMAIL_VERIFICATION);
+      try {
+        const checkNewEmail = await this.userService.findByEmailAddress(newEmailAddress);
+        if (checkNewEmail) throw new BadRequestException(ErrorMessages.INVALID_REQUEST);
+      } catch (error) {
+        await this.userService.updateSensitiveData({ emailAddress: newEmailAddress, status: Status.INACTIVE, verified: false }, user.emailAddress);
+        await this.queueVerificationEmail(newEmailAddress, 'Verify Email', EmailPurpose.EMAIL_VERIFICATION);
+      }
       return;
     } catch (error) {
+      console.log(error);
       if (!(error instanceof InternalServerErrorException)) throw error;
       throw new InternalServerErrorException(error.message);
     }

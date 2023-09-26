@@ -5,7 +5,7 @@ import { UpdateUserDTO } from './dto/update_user.dto';
 import { SecurityService } from './../security/security.service';
 import { InjectModel } from '@nestjs/mongoose';
 import { IInternalUser, IInternalUpdate } from './../../types/user.types';
-import { ErrorMessages } from './../../utils/constant';
+import { DEFAULT_DATABASE_CONNECTION, ErrorMessages } from './../../utils/constant';
 import { validateObjectId } from './../../utils/helper';
 import { TransactionManager } from '../shared/transaction.manager';
 
@@ -15,7 +15,11 @@ export class UserService {
   private readonly userModel: Model<User>;
   private readonly transactionManager: TransactionManager;
 
-  constructor(securityService: SecurityService, @InjectModel(User.name) userModel: Model<User>, transactionManager: TransactionManager) {
+  constructor(
+    securityService: SecurityService,
+    @InjectModel(User.name, DEFAULT_DATABASE_CONNECTION) userModel: Model<User>,
+    transactionManager: TransactionManager,
+  ) {
     this.securityService = securityService;
     this.userModel = userModel;
     this.transactionManager = transactionManager;
@@ -144,6 +148,7 @@ export class UserService {
       } else {
         session = await this.transactionManager.startSession();
       }
+
       validateObjectId(userId);
       await this.transactionManager.startTransaction();
       await this.userModel.findByIdAndDelete(userId, { session: session });
@@ -151,7 +156,7 @@ export class UserService {
       return;
     } catch (error) {
       await this.transactionManager.abortTransaction();
-      if (error instanceof BadRequestException) throw error;
+      if (!(error instanceof InternalServerErrorException)) throw error;
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
     } finally {
       await this.transactionManager.endSession();

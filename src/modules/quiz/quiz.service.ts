@@ -9,6 +9,7 @@ import { PaginationDTO } from './dto/pagination.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { LoggerService } from '../logger/logger.service';
 import { TransactionManager } from '../shared/transaction.manager';
+import { DEFAULT_DATABASE_CONNECTION } from 'src/utils/constant';
 
 @Injectable()
 export class QuizService {
@@ -16,7 +17,11 @@ export class QuizService {
   private readonly quizModel: Model<Quiz>;
   private readonly transactionManager: TransactionManager;
 
-  constructor(loggerService: LoggerService, @InjectModel(Quiz.name) quizModel: Model<Quiz>, transactionManager: TransactionManager) {
+  constructor(
+    loggerService: LoggerService,
+    @InjectModel(Quiz.name, DEFAULT_DATABASE_CONNECTION) quizModel: Model<Quiz>,
+    transactionManager: TransactionManager,
+  ) {
     this.loggerService = loggerService;
     this.quizModel = quizModel;
     this.transactionManager = transactionManager;

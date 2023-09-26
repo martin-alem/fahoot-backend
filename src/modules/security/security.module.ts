@@ -8,10 +8,11 @@ import { JwtModule } from '@nestjs/jwt';
 import { SharedModule } from './../shared/shared.module';
 import { APIKeyMiddleware } from './../../middleware/apikey.middleware';
 import { AuthenticationMiddleware } from './../../middleware/auth.middleware';
+import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Token.name, schema: TokenSchema }]),
+    MongooseModule.forFeature([{ name: Token.name, schema: TokenSchema }], DEFAULT_DATABASE_CONNECTION),
     JwtModule.register({
       secret: process.env.JWT_SECRET,
     }),
@@ -27,6 +28,6 @@ export class SecurityModule implements NestModule {
     consumer.apply(APIKeyMiddleware).forRoutes(SecurityController);
     consumer
       .apply(AuthenticationMiddleware)
-      .forRoutes({ path: 'security/updatePassword', method: RequestMethod.POST }, { path: 'security/updateEmail', method: RequestMethod.POST });
+      .forRoutes({ path: 'security/update_password', method: RequestMethod.POST }, { path: 'security/update_email', method: RequestMethod.POST });
   }
 }
