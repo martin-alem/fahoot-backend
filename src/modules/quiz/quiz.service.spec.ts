@@ -6,7 +6,8 @@ import { TransactionManager } from '../shared/transaction.manager';
 import { Quiz } from './schema/quiz.schema';
 import { CreateQuizDTO } from './dto/create_quiz.dto';
 import { PaginationDTO } from './dto/pagination.dto';
-import { PaginationResult } from 'src/types/pagination.types';
+import { PaginationResult } from './../../types/pagination.types';
+import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
 
 describe('QuizService', () => {
   let service: QuizService;
@@ -37,7 +38,7 @@ describe('QuizService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         { provide: LoggerService, useValue: mockLoggerService },
-        { provide: getModelToken(Quiz.name), useValue: mockQuizModel },
+        { provide: getModelToken(Quiz.name, DEFAULT_DATABASE_CONNECTION), useValue: mockQuizModel },
         { provide: TransactionManager, useValue: mockTransactionManager },
         QuizService,
       ],

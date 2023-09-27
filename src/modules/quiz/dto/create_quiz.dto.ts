@@ -14,6 +14,5 @@ export class CreateQuizDTO {
   questions: QuestionDTO[];
 
   @IsNotEmpty()
-  @Type(() => SettingDTO)
   settings: SettingDTO;
 }

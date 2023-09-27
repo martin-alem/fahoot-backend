@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { ClientSession, Connection } from 'mongoose';
-import { DEFAULT_DATABASE_CONNECTION } from 'src/utils/constant';
+import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
 
 @Injectable()
 export class TransactionManager {

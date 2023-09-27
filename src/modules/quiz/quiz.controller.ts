@@ -63,8 +63,16 @@ export class QuizController {
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
   @Get()
-  public async getQuizzes(pagination: PaginationDTO, @Req() request: Request): Promise<IPaginationResult<Quiz>> {
+  public async getQuizzes(
+    @Query('page') page: number,
+    @Query('query') query: string,
+    @Query('pageSize') pageSize: number,
+    @Query('sortField') sortField: string,
+    @Query('sortOrder') sortOrder: 'asc' | 'desc',
+    @Req() request: Request,
+  ): Promise<IPaginationResult<Quiz>> {
     try {
+      const pagination: PaginationDTO = { page: page, query: query, pageSize: pageSize, sortOrder: sortOrder, sortField: sortField };
       const userId = this.authService.getId();
       const quizzes = await this.quizService.getQuizzes(userId, pagination);
       return quizzes;

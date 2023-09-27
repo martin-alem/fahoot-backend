@@ -183,7 +183,6 @@ export class SecurityService {
    */
   private async verifyToken(token: string): Promise<IAuthUser> {
     try {
-      console.log('Verifying token', token);
       const tokenExist = await this.tokenModel.findOne({ token: token });
       if (!tokenExist) throw new UnauthorizedException(ErrorMessages.UNAUTHORIZED);
       const decodedToken = await this.validateToken(token);

@@ -1,5 +1,6 @@
-import { Prop, SchemaFactory } from '@nestjs/mongoose';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
+@Schema()
 export class Option {
   @Prop({ type: Boolean, required: true })
   isCorrect: boolean;

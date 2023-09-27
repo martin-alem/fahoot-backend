@@ -6,7 +6,7 @@ import { Log } from './schema/log.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { PaginationOptions, PaginationResult } from 'src/types/pagination.types';
 import { FilterDTO } from './dto/filter.dto';
-import { DEFAULT_DATABASE_CONNECTION } from 'src/utils/constant';
+import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
 
 @Injectable()
 export class LoggerService implements OnModuleInit {

@@ -9,7 +9,7 @@ import { PaginationDTO } from './dto/pagination.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { LoggerService } from '../logger/logger.service';
 import { TransactionManager } from '../shared/transaction.manager';
-import { DEFAULT_DATABASE_CONNECTION } from 'src/utils/constant';
+import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
 
 @Injectable()
 export class QuizService {
@@ -74,19 +74,25 @@ export class QuizService {
   public async getQuizzes(userId: string, pagination: PaginationDTO): Promise<IPaginationResult<Quiz>> {
     try {
       validateObjectId(userId);
-      const { page, pageSize } = pagination;
+      const { page, pageSize, query } = pagination;
 
-      const totalQuizzes = await this.quizModel.countDocuments({ userId: userId });
-      const totalPages = Math.ceil(totalQuizzes / pageSize);
-
-      const skip = (page - 1) * pageSize;
-
+      //Preventing page from being 0
+      const skip = (page == 0 ? 0 : page - 1) * pageSize;
       const sortField = pagination.sortField ?? 'published';
       const sortOrder = pagination.sortOrder === 'desc' ? -1 : 1;
 
+      const totalQuizzes = await this.quizModel.countDocuments({
+        userId: userId,
+        status: sortField,
+        title: { $regex: query ? query : '', $options: 'i' },
+      });
+      const totalPages = Math.ceil(totalQuizzes / pageSize);
+
       const results = await this.quizModel
-        .find({ userId: userId })
-        .sort({ [sortField]: sortOrder })
+        .find({ userId: userId, status: sortField })
+        .where('title')
+        .regex(new RegExp(query ? query : '', 'i'))
+        .sort({ createdAt: sortOrder })
         .skip(skip)
         .limit(pageSize)
         .exec();

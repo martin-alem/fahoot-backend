@@ -1,16 +1,17 @@
-import { Prop, SchemaFactory } from '@nestjs/mongoose';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
+@Schema()
 export class Settings {
-  @Prop({ type: String, required: false, default: null })
+  @Prop({ type: String, required: true })
   lobbyMusic: string;
 
-  @Prop({ type: String, required: false, default: null })
+  @Prop({ type: String, required: true })
   podiumMusic: string;
 
-  @Prop({ type: String, required: false, default: null })
+  @Prop({ type: String, required: true })
   gameMusic: string;
 
-  @Prop({ type: String, required: false, default: null })
+  @Prop({ type: String, required: true })
   colorLabel: string;
 }
 
