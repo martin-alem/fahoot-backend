@@ -28,4 +28,5 @@ jobs:
       - run: npm install
       - run: npm run format
       - run: npm run lint
+      - run: npm build
       # - run: npm run test
