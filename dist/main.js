@@ -30,7 +30,7 @@ async function bootstrap() {
     const config = new swagger_1.DocumentBuilder().setTitle('Fahoot API').setDescription('Fahoot API documentation').setVersion('1.0').addTag('Fahoot').build();
     const document = swagger_1.SwaggerModule.createDocument(app, config);
     swagger_1.SwaggerModule.setup('api', app, document);
-    await app.listen(3000);
+    await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap().catch((error) => console.error(error));
 //# sourceMappingURL=main.js.map
