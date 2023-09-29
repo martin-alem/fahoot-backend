@@ -22,7 +22,7 @@ import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
   imports: [
     ThrottlerModule.forRoot({
       ttl: 60,
-      limit: 10,
+      limit: 1000,
     }),
     UserModule,
     AuthenticationModule,

@@ -115,10 +115,11 @@ export class QuizService {
     try {
       validateObjectId(quizId);
       validateObjectId(userId);
-      const updatedQuiz = await this.quizModel.findOneAndUpdate({ id: quizId, userId: userId }, payload, { new: true });
-      if (!updatedQuiz) throw new InternalServerErrorException();
+      const updatedQuiz = await this.quizModel.findOneAndUpdate({ _id: quizId, userId: userId }, payload, { new: true });
+      if (!updatedQuiz) throw new BadRequestException('Unable to update quiz');
       return updatedQuiz;
     } catch (error) {
+      console.log(error);
       this.loggerService.log(JSON.stringify({ event: 'error_updating_quiz', description: error.message, level: LEVEL.CRITICAL }));
       if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException(error.message);
@@ -191,25 +192,14 @@ export class QuizService {
    * @returns void
    */
   public async deleteAllQuizzes(userId: string, ses?: ClientSession): Promise<void> {
-    let session = null;
     try {
-      if (ses) {
-        session = ses;
-      } else {
-        session = await this.transactionManager.startSession();
-      }
       validateObjectId(userId);
-      await this.transactionManager.startTransaction();
-      await this.quizModel.deleteMany({ userId: userId }, { session: session });
-      await this.transactionManager.commitTransaction();
+      await this.quizModel.deleteMany({ userId: userId }, { session: ses });
       return;
     } catch (error) {
-      await this.transactionManager.abortTransaction();
       if (error instanceof BadRequestException) throw error;
       if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException(error.message);
-    } finally {
-      await this.transactionManager.endSession();
     }
   }
 }

@@ -20,6 +20,7 @@ import { SecurityService } from '../security/security.service';
 import { ResponseInterceptor } from './../../interceptor/response.interceptor';
 import { UserShape } from './response/UserShape';
 import { IAuthUser } from 'src/types/user.types';
+import { GoogleOAuthDTO } from './dto/google_auth.dto';
 
 @Controller('authentication')
 export class AuthenticationController {
@@ -53,9 +54,9 @@ export class AuthenticationController {
 
   @Throttle(SIGNUP_REQUEST.LIMIT, SIGNUP_REQUEST.TTL)
   @Post('/google_signup')
-  public async googleSignup(@Body() payload: string, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<User> {
+  public async googleSignup(@Body() payload: GoogleOAuthDTO, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<User> {
     try {
-      const user = await this.authenticationService.googleSignUp(payload);
+      const user = await this.authenticationService.googleSignUp(payload.credential);
       const accessToken = await this.securityService.generateTokens(
         { id: user._id, emailAddress: user.emailAddress, role: user.role },
         JWT_TTL.ACCESS_TOKEN_TTL,
@@ -93,9 +94,9 @@ export class AuthenticationController {
 
   @Throttle(SIGNIN_REQUEST.LIMIT, SIGNIN_REQUEST.TTL)
   @Post('/google_signin')
-  public async googleSignin(@Body() payload: string, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<User> {
+  public async googleSignin(@Body() payload: GoogleOAuthDTO, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<User> {
     try {
-      const user = await this.authenticationService.googleSignIn(payload);
+      const user = await this.authenticationService.googleSignIn(payload.credential);
       const accessToken = await this.securityService.generateTokens(
         { id: user._id, emailAddress: user.emailAddress, role: user.role },
         JWT_TTL.ACCESS_TOKEN_TTL,

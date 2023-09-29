@@ -8,21 +8,25 @@ import { IInternalUser, IInternalUpdate } from './../../types/user.types';
 import { DEFAULT_DATABASE_CONNECTION, ErrorMessages } from './../../utils/constant';
 import { validateObjectId } from './../../utils/helper';
 import { TransactionManager } from '../shared/transaction.manager';
+import { QuizService } from '../quiz/quiz.service';
 
 @Injectable()
 export class UserService {
   private readonly securityService: SecurityService;
   private readonly userModel: Model<User>;
   private readonly transactionManager: TransactionManager;
+  private readonly quizService: QuizService;
 
   constructor(
     securityService: SecurityService,
     @InjectModel(User.name, DEFAULT_DATABASE_CONNECTION) userModel: Model<User>,
     transactionManager: TransactionManager,
+    quizService: QuizService,
   ) {
     this.securityService = securityService;
     this.userModel = userModel;
     this.transactionManager = transactionManager;
+    this.quizService = quizService;
   }
 
   /**
@@ -152,6 +156,7 @@ export class UserService {
       validateObjectId(userId);
       await this.transactionManager.startTransaction();
       await this.userModel.findByIdAndDelete(userId, { session: session });
+      await this.quizService.deleteAllQuizzes(userId, session);
       await this.transactionManager.commitTransaction();
       return;
     } catch (error) {

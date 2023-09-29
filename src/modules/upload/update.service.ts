@@ -30,8 +30,8 @@ export class UploadService {
       case UploadDestination.PROFILE:
         fullPath = `${SPACES_ROOT}/${UploadDestination.PROFILE}/${filename}`;
         break;
-      case UploadDestination.QUESTION:
-        fullPath = `${SPACES_ROOT}/${UploadDestination.QUESTION}/${filename}`;
+      case UploadDestination.QUESTION_MEDIA:
+        fullPath = `${SPACES_ROOT}/${UploadDestination.QUESTION_MEDIA}/${filename}`;
         break;
       default:
         fullPath = `${SPACES_ROOT}/${UploadDestination.DEFAULT}/${filename}`;

@@ -87,7 +87,7 @@ export class QuizController {
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
   @Put(':quizId')
-  public async updateQuiz(@Param('quizId') quizId: string, payload: Partial<CreateQuizDTO>, @Req() request: Request): Promise<Quiz> {
+  public async updateQuiz(@Param('quizId') quizId: string, @Body() payload: Partial<CreateQuizDTO>, @Req() request: Request): Promise<Quiz> {
     try {
       const userId = this.authService.getId();
       const updatedQuiz = await this.quizService.updateQuiz(quizId, userId, payload);

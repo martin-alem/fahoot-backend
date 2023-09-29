@@ -27,7 +27,7 @@ export enum QuizStatus {
 
 export enum UploadDestination {
   PROFILE = 'profile',
-  QUESTION = 'question',
+  QUESTION_MEDIA = 'question_media',
   DEFAULT = 'default',
 }
 

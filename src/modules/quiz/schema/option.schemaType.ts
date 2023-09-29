@@ -7,6 +7,9 @@ export class Option {
 
   @Prop({ type: String, required: true, lowercase: true })
   option: string;
+
+  @Prop({ type: String, required: true })
+  colorLabel: string;
 }
 
 export const OptionSchema = SchemaFactory.createForClass(Option);

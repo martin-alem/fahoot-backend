@@ -8,4 +8,8 @@ export class OptionDTO {
   @IsNotEmpty()
   @IsString()
   option: string;
+
+  @IsNotEmpty()
+  @IsString()
+  colorLabel: string;
 }

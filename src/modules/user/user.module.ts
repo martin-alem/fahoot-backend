@@ -8,11 +8,13 @@ import { SharedModule } from './../shared/shared.module';
 import { APIKeyMiddleware } from './../../middleware/apikey.middleware';
 import { AuthenticationMiddleware } from './../../middleware/auth.middleware';
 import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
+import { QuizModule } from '../quiz/quiz.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }], DEFAULT_DATABASE_CONNECTION),
     forwardRef(() => SecurityModule),
+    forwardRef(() => QuizModule),
     SharedModule,
   ],
   providers: [UserService],

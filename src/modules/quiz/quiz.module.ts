@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, forwardRef } from '@nestjs/common';
 import { QuizService } from './quiz.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Quiz, QuizSchema } from './schema/quiz.schema';
@@ -15,10 +15,11 @@ import { UserModule } from '../user/user.module';
     MongooseModule.forFeature([{ name: Quiz.name, schema: QuizSchema }], DEFAULT_DATABASE_CONNECTION),
     SharedModule,
     SecurityModule,
-    UserModule,
+    forwardRef(() => UserModule),
   ],
   providers: [QuizService],
   controllers: [QuizController],
+  exports: [QuizService],
 })
 export class QuizModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
