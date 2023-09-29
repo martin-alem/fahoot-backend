@@ -9,6 +9,7 @@ import { SignInDTO } from './dto/signin.dto';
 import { SignUpDTO } from './dto/signup.dto';
 import { setCookie, log } from './../../utils/helper';
 import { InternalServerErrorException } from '@nestjs/common';
+import { GoogleOAuthDTO } from './dto/google_auth.dto';
 
 jest.mock('../security/security.service');
 jest.mock('../logger/logger.service');
@@ -47,6 +48,10 @@ describe('AuthenticationController', () => {
     emailAddress: 'john.deo@gmail.com',
     password: 'password',
     authenticationMethod: AuthenticationMethod.MANUAL,
+  };
+
+  const googleOAuth: GoogleOAuthDTO = {
+    credential: 'google',
   };
 
   const SignInDTO: SignInDTO = {
@@ -109,7 +114,7 @@ describe('AuthenticationController', () => {
       mockService.googleSignUp = jest.fn().mockResolvedValue(mockUser);
       mockSecurityService.generateTokens = jest.fn().mockResolvedValue('token');
       const spy = jest.spyOn(mockService, 'googleSignUp');
-      await controller.googleSignup('', mockRequest as Request, mockResponse as Response);
+      await controller.googleSignup(googleOAuth, mockRequest as Request, mockResponse as Response);
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
@@ -117,21 +122,23 @@ describe('AuthenticationController', () => {
       mockService.googleSignUp = jest.fn().mockResolvedValue(mockUser);
       mockSecurityService.generateTokens = jest.fn().mockResolvedValue('token');
       const spy = jest.spyOn(mockSecurityService, 'generateTokens');
-      await controller.googleSignup('', mockRequest as Request, mockResponse as Response);
+      await controller.googleSignup(googleOAuth, mockRequest as Request, mockResponse as Response);
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
     it('should call the setCookie method', async () => {
       mockService.googleSignUp = jest.fn().mockResolvedValue(mockUser);
       mockSecurityService.generateTokens = jest.fn().mockResolvedValue('token');
-      await controller.googleSignup('', mockRequest as Request, mockResponse as Response);
+      await controller.googleSignup(googleOAuth, mockRequest as Request, mockResponse as Response);
       expect(setCookie).toHaveBeenCalledTimes(1);
       expect(setCookie).toHaveBeenCalledWith(mockResponse, '_access_token', 'token', expect.any(Number));
     });
 
     it('should call the log method when an error occurs', async () => {
       mockService.googleSignUp = jest.fn().mockRejectedValue(new InternalServerErrorException());
-      await expect(controller.googleSignup('', mockRequest as Request, mockResponse as Response)).rejects.toThrow(InternalServerErrorException);
+      await expect(controller.googleSignup(googleOAuth, mockRequest as Request, mockResponse as Response)).rejects.toThrow(
+        InternalServerErrorException,
+      );
       expect(log).toHaveBeenCalledTimes(1);
     });
   });
@@ -173,7 +180,7 @@ describe('AuthenticationController', () => {
       mockService.googleSignIn = jest.fn().mockResolvedValue(mockUser);
       mockSecurityService.generateTokens = jest.fn().mockResolvedValue('token');
       const spy = jest.spyOn(mockService, 'googleSignIn');
-      await controller.googleSignin('', mockRequest as Request, mockResponse as Response);
+      await controller.googleSignin(googleOAuth, mockRequest as Request, mockResponse as Response);
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
@@ -181,21 +188,23 @@ describe('AuthenticationController', () => {
       mockService.googleSignIn = jest.fn().mockResolvedValue(mockUser);
       mockSecurityService.generateTokens = jest.fn().mockResolvedValue('token');
       const spy = jest.spyOn(mockSecurityService, 'generateTokens');
-      await controller.googleSignin('', mockRequest as Request, mockResponse as Response);
+      await controller.googleSignin(googleOAuth, mockRequest as Request, mockResponse as Response);
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
     it('should call the setCookie method', async () => {
       mockService.googleSignIn = jest.fn().mockResolvedValue(mockUser);
       mockSecurityService.generateTokens = jest.fn().mockResolvedValue('token');
-      await controller.googleSignin('', mockRequest as Request, mockResponse as Response);
+      await controller.googleSignin(googleOAuth, mockRequest as Request, mockResponse as Response);
       expect(setCookie).toHaveBeenCalledTimes(1);
       expect(setCookie).toHaveBeenCalledWith(mockResponse, '_access_token', 'token', expect.any(Number));
     });
 
     it('should call the log method when an error occurs', async () => {
       mockService.googleSignIn = jest.fn().mockRejectedValue(new InternalServerErrorException());
-      await expect(controller.googleSignin('', mockRequest as Request, mockResponse as Response)).rejects.toThrow(InternalServerErrorException);
+      await expect(controller.googleSignin(googleOAuth, mockRequest as Request, mockResponse as Response)).rejects.toThrow(
+        InternalServerErrorException,
+      );
       expect(log).toHaveBeenCalledTimes(1);
     });
   });

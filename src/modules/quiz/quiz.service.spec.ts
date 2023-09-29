@@ -78,6 +78,7 @@ describe('QuizService', () => {
         pageSize: 1,
         sortField: '',
         sortOrder: 'asc',
+        query: '',
       };
       const userId = 'someUserId';
       const quizList = ['quiz1', 'quiz2'];
