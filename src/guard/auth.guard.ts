@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from './../types/user.types';
 import { Status } from './../utils/constant';
@@ -20,6 +20,6 @@ export class AuthorizationGuard implements CanActivate {
     if (!role && !status) return true;
     else if (role && !status) return this.authService.getRole() == role;
     else if (this.authService.getRole() == role && this.authService.getStatus() == status) return true;
-    return false;
+    throw new UnauthorizedException('Unauthorized access');
   }
 }

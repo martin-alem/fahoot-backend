@@ -24,22 +24,23 @@ let AuthenticationMiddleware = exports.AuthenticationMiddleware = class Authenti
         try {
             const tokenCookie = req.cookies['_access_token'];
             if (!tokenCookie) {
-                throw new common_1.ForbiddenException('Token cookie not found');
+                throw new common_1.UnauthorizedException('Access token not found');
             }
             const decodedPayload = await this.securityService.validateToken(tokenCookie);
-            const user = await this.userService.getUser(decodedPayload.id);
-            if (!user) {
-                throw new common_1.NotFoundException(`User ${decodedPayload.id} not found`);
+            const decodedPayloadData = decodedPayload.getData();
+            if (!decodedPayloadData)
+                throw new common_1.BadRequestException('Unable to decode token');
+            const user = await this.userService.getUser(decodedPayloadData.id);
+            const userData = user.getData();
+            if (!userData) {
+                throw new common_1.BadRequestException(`User ${decodedPayloadData.id} not found`);
             }
-            this.authService.setId(decodedPayload.id);
-            this.authService.setStatus(user.status);
-            this.authService.setRole(decodedPayload.role);
+            this.authService.setId(decodedPayloadData.id);
+            this.authService.setStatus(userData.status);
+            this.authService.setRole(decodedPayloadData.role);
             next();
         }
         catch (error) {
-            if (error instanceof common_1.NotFoundException || error instanceof common_1.BadRequestException) {
-                throw new common_1.ForbiddenException('Invalid token or user');
-            }
             throw error;
         }
     }

@@ -14,7 +14,8 @@ const common_1 = require("@nestjs/common");
 const client_s3_1 = require("@aws-sdk/client-s3");
 const helper_1 = require("./../../utils/helper");
 const config_1 = require("@nestjs/config");
-const constant_1 = require("../../utils/constant");
+const constant_1 = require("./../../utils/constant");
+const result_1 = require("./../../wrapper/result");
 let UploadService = exports.UploadService = class UploadService {
     constructor(configService) {
         this.configService = configService;
@@ -52,14 +53,11 @@ let UploadService = exports.UploadService = class UploadService {
                 ACL: 'public-read',
             };
             await this.s3.send(new client_s3_1.PutObjectCommand(params));
-            return {
-                filename: `https://${BUCKET}.${SPACES_ENDPOINT}/${fullPath}`,
-            };
+            const data = { filename: `https://${BUCKET}.${SPACES_ENDPOINT}/${fullPath}` };
+            return new result_1.default(true, data, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (!(error instanceof common_1.InternalServerErrorException))
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async deleteFile(key) {
@@ -70,12 +68,12 @@ let UploadService = exports.UploadService = class UploadService {
                 Key: `${key}`,
             };
             await this.s3.send(new client_s3_1.DeleteObjectCommand(params));
-            return;
+            return new result_1.default(true, true, null, common_1.HttpStatus.OK);
         }
         catch (error) {
             if (!(error instanceof common_1.InternalServerErrorException))
                 throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 };

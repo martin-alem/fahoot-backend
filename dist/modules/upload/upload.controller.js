@@ -34,20 +34,21 @@ let UploadController = exports.UploadController = class UploadController {
         try {
             const { destination } = payload;
             const uploadResponse = await this.uploadService.uploadFile(file, destination);
-            return uploadResponse;
+            return (0, helper_1.handleResult)(uploadResponse);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'file_upload_error', error.message, request, log_types_1.LEVEL.CRITICAL);
             throw error;
         }
     }
-    deleteFile(key, request) {
+    async deleteFile(key, request) {
         try {
-            return this.uploadService.deleteFile(key);
+            const result = await this.uploadService.deleteFile(key);
+            return (0, helper_1.handleResult)(result);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'file_delete_error', error.message, request, log_types_1.LEVEL.CRITICAL);
-            throw new common_1.InternalServerErrorException(constant_1.ErrorMessages.INTERNAL_ERROR);
+            throw error;
         }
     }
 };
@@ -58,7 +59,9 @@ __decorate([
     (0, auth_decorator_1.Active)(constant_1.Status.ACTIVE),
     (0, common_1.UseGuards)(auth_guard_1.AuthorizationGuard),
     (0, common_1.Post)(),
-    __param(0, (0, common_1.UploadedFile)()),
+    __param(0, (0, common_1.UploadedFile)(new common_1.ParseFilePipe({
+        validators: [new common_1.MaxFileSizeValidator({ maxSize: constant_1.MAX_FILE_SIZE }), new common_1.FileTypeValidator({ fileType: 'image/*' })],
+    }))),
     __param(1, (0, common_1.Body)()),
     __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),

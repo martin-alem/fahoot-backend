@@ -14,6 +14,5 @@ export declare class QuizController {
     getQuiz(quizId: string, request: Request): Promise<Quiz>;
     getQuizzes(page: number, query: string, pageSize: number, sortField: string, sortOrder: 'asc' | 'desc', request: Request): Promise<IPaginationResult<Quiz>>;
     updateQuiz(quizId: string, payload: Partial<CreateQuizDTO>, request: Request): Promise<Quiz>;
-    deleteQuiz(quizId: string, request: Request): Promise<void>;
-    deleteAllQuizzes(quizId: string, request: Request): Promise<void>;
+    deleteQuiz(quizId: string, request: Request): Promise<Quiz>;
 }

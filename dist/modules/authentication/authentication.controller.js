@@ -34,9 +34,15 @@ let AuthenticationController = exports.AuthenticationController = class Authenti
     async signup(payload, request, response) {
         try {
             const user = await this.authenticationService.signUp(payload);
-            const accessToken = await this.securityService.generateTokens({ id: user._id, emailAddress: user.emailAddress, role: user.role }, constant_1.JWT_TTL.ACCESS_TOKEN_TTL);
-            (0, helper_1.setCookie)(response, constant_1.ACCESS_TOKEN_COOKIE_NAME, accessToken, constant_1.COOKIE.ACCESS_TOKEN_COOKIE_TTL);
-            return user;
+            const userData = user.getData();
+            if (!userData)
+                throw new common_1.BadRequestException('Unable to signup user');
+            const accessToken = await this.securityService.generateTokens({ id: userData._id, emailAddress: userData.emailAddress, role: userData.role }, constant_1.JWT_TTL.ACCESS_TOKEN_TTL);
+            const accessTokenData = accessToken.getData();
+            if (!accessTokenData)
+                throw new common_1.BadRequestException('Could not generate access token');
+            (0, helper_1.setCookie)(response, constant_1.ACCESS_TOKEN_COOKIE_NAME, accessTokenData, constant_1.COOKIE.ACCESS_TOKEN_COOKIE_TTL);
+            return (0, helper_1.handleResult)(user);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'manual_signup-error', error.message, request);
@@ -46,9 +52,15 @@ let AuthenticationController = exports.AuthenticationController = class Authenti
     async googleSignup(payload, request, response) {
         try {
             const user = await this.authenticationService.googleSignUp(payload.credential);
-            const accessToken = await this.securityService.generateTokens({ id: user._id, emailAddress: user.emailAddress, role: user.role }, constant_1.JWT_TTL.ACCESS_TOKEN_TTL);
-            (0, helper_1.setCookie)(response, constant_1.ACCESS_TOKEN_COOKIE_NAME, accessToken, constant_1.COOKIE.ACCESS_TOKEN_COOKIE_TTL);
-            return user;
+            const userData = user.getData();
+            if (!userData)
+                throw new common_1.BadRequestException('Unable to signup user using google');
+            const accessToken = await this.securityService.generateTokens({ id: userData._id, emailAddress: userData.emailAddress, role: userData.role }, constant_1.JWT_TTL.ACCESS_TOKEN_TTL);
+            const accessTokenData = accessToken.getData();
+            if (!accessTokenData)
+                throw new common_1.BadRequestException('Could not generate access token');
+            (0, helper_1.setCookie)(response, constant_1.ACCESS_TOKEN_COOKIE_NAME, accessTokenData, constant_1.COOKIE.ACCESS_TOKEN_COOKIE_TTL);
+            return (0, helper_1.handleResult)(user);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'google_signup-error', error.message, request);
@@ -58,12 +70,21 @@ let AuthenticationController = exports.AuthenticationController = class Authenti
     async signin(payload, request, response) {
         try {
             const user = await this.authenticationService.signIn(payload);
-            const accessToken = await this.securityService.generateTokens({ id: user._id, emailAddress: user.emailAddress, role: user.role }, constant_1.JWT_TTL.ACCESS_TOKEN_TTL);
-            const rememberMeToken = await this.securityService.generateTokens({ id: user._id, emailAddress: user.emailAddress, role: user.role }, constant_1.JWT_TTL.REMEMBER_ME_TOKEN_TTL);
-            (0, helper_1.setCookie)(response, constant_1.ACCESS_TOKEN_COOKIE_NAME, accessToken, constant_1.COOKIE.ACCESS_TOKEN_COOKIE_TTL);
+            const userData = user.getData();
+            if (!userData)
+                throw new common_1.BadRequestException('Unable to signin user');
+            const accessToken = await this.securityService.generateTokens({ id: userData._id, emailAddress: userData.emailAddress, role: userData.role }, constant_1.JWT_TTL.ACCESS_TOKEN_TTL);
+            const rememberMeToken = await this.securityService.generateTokens({ id: userData._id, emailAddress: userData.emailAddress, role: userData.role }, constant_1.JWT_TTL.REMEMBER_ME_TOKEN_TTL);
+            const accessTokenData = accessToken.getData();
+            if (!accessTokenData)
+                throw new common_1.BadRequestException('Could not generate access token');
+            const rememberMeTokenData = rememberMeToken.getData();
+            if (!rememberMeTokenData)
+                throw new common_1.BadRequestException('Could not generate rememberMe token');
+            (0, helper_1.setCookie)(response, constant_1.ACCESS_TOKEN_COOKIE_NAME, accessTokenData, constant_1.COOKIE.ACCESS_TOKEN_COOKIE_TTL);
             if (payload.rememberMe)
-                (0, helper_1.setCookie)(response, constant_1.REMEMBER_ME_COOKIE_NAME, rememberMeToken, constant_1.COOKIE.REMEMBER_ME_COOKIE_TTL);
-            return user;
+                (0, helper_1.setCookie)(response, constant_1.REMEMBER_ME_COOKIE_NAME, rememberMeTokenData, constant_1.COOKIE.REMEMBER_ME_COOKIE_TTL);
+            return (0, helper_1.handleResult)(user);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'manual_signin-error', error.message, request);
@@ -73,23 +94,32 @@ let AuthenticationController = exports.AuthenticationController = class Authenti
     async googleSignin(payload, request, response) {
         try {
             const user = await this.authenticationService.googleSignIn(payload.credential);
-            const accessToken = await this.securityService.generateTokens({ id: user._id, emailAddress: user.emailAddress, role: user.role }, constant_1.JWT_TTL.ACCESS_TOKEN_TTL);
-            (0, helper_1.setCookie)(response, constant_1.ACCESS_TOKEN_COOKIE_NAME, accessToken, constant_1.COOKIE.ACCESS_TOKEN_COOKIE_TTL);
-            return user;
+            const userData = user.getData();
+            if (!userData)
+                throw new common_1.BadRequestException('Unable to signin user using google');
+            const accessToken = await this.securityService.generateTokens({ id: userData._id, emailAddress: userData.emailAddress, role: userData.role }, constant_1.JWT_TTL.ACCESS_TOKEN_TTL);
+            const accessTokenData = accessToken.getData();
+            if (!accessTokenData)
+                throw new common_1.BadRequestException('Could not generate access token');
+            (0, helper_1.setCookie)(response, constant_1.ACCESS_TOKEN_COOKIE_NAME, accessTokenData, constant_1.COOKIE.ACCESS_TOKEN_COOKIE_TTL);
+            return (0, helper_1.handleResult)(user);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'google_signin-error', error.message, request);
             throw error;
         }
     }
-    async autoLogin(request) {
+    async autoLogin(request, response) {
         try {
             const tokenCookie = request.cookies[constant_1.REMEMBER_ME_COOKIE_NAME];
             if (!tokenCookie) {
-                throw new common_1.ForbiddenException('Token cookie not found');
+                response.status(204);
+                return null;
             }
             const decodedPayload = await this.securityService.validateToken(tokenCookie);
-            return decodedPayload;
+            if (!decodedPayload.isSuccess())
+                throw new common_1.BadRequestException('Unable to decode payload');
+            return (0, helper_1.handleResult)(decodedPayload);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'auto_signin-error', error.message, request);
@@ -149,8 +179,9 @@ __decorate([
     (0, throttler_1.Throttle)(constant_1.SIGNIN_REQUEST.LIMIT, constant_1.SIGNIN_REQUEST.TTL),
     (0, common_1.Post)('/auto_login'),
     __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], AuthenticationController.prototype, "autoLogin", null);
 __decorate([

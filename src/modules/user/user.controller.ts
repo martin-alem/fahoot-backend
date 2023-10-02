@@ -9,7 +9,7 @@ import { AuthorizationGuard } from './../../guard/auth.guard';
 import { DELETE_USER_REQUEST, GET_USER_REQUEST, Status, UPDATE_USER_REQUEST } from './../../utils/constant';
 import { UserRole } from './../../types/user.types';
 import { LoggerService } from '../logger/logger.service';
-import { log } from './../../utils/helper';
+import { handleResult, log } from './../../utils/helper';
 import { LEVEL } from './../../types/log.types';
 import { UserDocument } from './schema/user.schema';
 import { ResponseInterceptor } from './../../interceptor/response.interceptor';
@@ -35,8 +35,10 @@ export class UserController {
   public async getUser(@Req() request: Request): Promise<UserDocument> {
     try {
       const id = this.authService.getId();
-      const user = await this.userService.getUser(id);
-      return user;
+
+      const result = await this.userService.getUser(id);
+
+      return handleResult<UserDocument>(result);
     } catch (error) {
       log(this.loggerService, 'get_user_error', error.message, request, LEVEL.CRITICAL);
       throw error;
@@ -52,8 +54,10 @@ export class UserController {
   public async updateUser(@Body() payload: UpdateUserDTO, @Req() request: Request): Promise<UserDocument> {
     try {
       const id = this.authService.getId();
-      const updatedUser = await this.userService.updateUser(payload, id);
-      return updatedUser;
+
+      const result = await this.userService.updateUser(payload, id);
+
+      return handleResult<UserDocument>(result);
     } catch (error) {
       log(this.loggerService, 'update_user_error', error.message, request, LEVEL.CRITICAL);
       throw error;
@@ -63,12 +67,15 @@ export class UserController {
   @Throttle(DELETE_USER_REQUEST.LIMIT, DELETE_USER_REQUEST.TTL)
   @Role(UserRole.USER)
   @UseGuards(AuthorizationGuard)
+  @UseInterceptors(new ResponseInterceptor(UserShape))
   @Delete()
-  public async deleteUser(@Req() request: Request): Promise<void> {
+  public async deleteUser(@Req() request: Request): Promise<UserDocument> {
     try {
       const id = this.authService.getId();
-      await this.userService.deleteUser(id);
-      return;
+
+      const result = await this.userService.deleteUser(id);
+
+      return handleResult<UserDocument>(result);
     } catch (error) {
       log(this.loggerService, 'update_user_error', error.message, request, LEVEL.CRITICAL);
       throw error;

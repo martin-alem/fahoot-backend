@@ -36,8 +36,8 @@ let UserController = exports.UserController = class UserController {
     async getUser(request) {
         try {
             const id = this.authService.getId();
-            const user = await this.userService.getUser(id);
-            return user;
+            const result = await this.userService.getUser(id);
+            return (0, helper_1.handleResult)(result);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'get_user_error', error.message, request, log_types_1.LEVEL.CRITICAL);
@@ -47,8 +47,8 @@ let UserController = exports.UserController = class UserController {
     async updateUser(payload, request) {
         try {
             const id = this.authService.getId();
-            const updatedUser = await this.userService.updateUser(payload, id);
-            return updatedUser;
+            const result = await this.userService.updateUser(payload, id);
+            return (0, helper_1.handleResult)(result);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'update_user_error', error.message, request, log_types_1.LEVEL.CRITICAL);
@@ -58,8 +58,8 @@ let UserController = exports.UserController = class UserController {
     async deleteUser(request) {
         try {
             const id = this.authService.getId();
-            await this.userService.deleteUser(id);
-            return;
+            const result = await this.userService.deleteUser(id);
+            return (0, helper_1.handleResult)(result);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'update_user_error', error.message, request, log_types_1.LEVEL.CRITICAL);
@@ -95,6 +95,7 @@ __decorate([
     (0, throttler_1.Throttle)(constant_1.DELETE_USER_REQUEST.LIMIT, constant_1.DELETE_USER_REQUEST.TTL),
     (0, auth_decorator_1.Role)(user_types_1.UserRole.USER),
     (0, common_1.UseGuards)(auth_guard_1.AuthorizationGuard),
+    (0, common_1.UseInterceptors)(new response_interceptor_1.ResponseInterceptor(UserShape_1.UserShape)),
     (0, common_1.Delete)(),
     __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),

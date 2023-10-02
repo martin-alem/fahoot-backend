@@ -5,16 +5,17 @@ import { SecurityService } from './../security/security.service';
 import { IInternalUser, IInternalUpdate } from './../../types/user.types';
 import { TransactionManager } from '../shared/transaction.manager';
 import { QuizService } from '../quiz/quiz.service';
+import Result from 'src/wrapper/result';
 export declare class UserService {
     private readonly securityService;
     private readonly userModel;
     private readonly transactionManager;
     private readonly quizService;
     constructor(securityService: SecurityService, userModel: Model<User>, transactionManager: TransactionManager, quizService: QuizService);
-    createUser(payload: IInternalUser, session?: ClientSession): Promise<UserDocument>;
-    getUser(userId: string): Promise<UserDocument>;
-    findByEmailAddress(emailAddress: string): Promise<UserDocument>;
-    updateUser(payload: UpdateUserDTO, userId: string, session?: ClientSession): Promise<UserDocument>;
-    updateSensitiveData(payload: IInternalUpdate, emailAddress: string, session?: ClientSession): Promise<void>;
-    deleteUser(userId: string, ses?: ClientSession): Promise<void>;
+    createUser(payload: IInternalUser, session?: ClientSession): Promise<Result<UserDocument | null>>;
+    getUser(userId: string): Promise<Result<UserDocument | null>>;
+    findByEmailAddress(emailAddress: string): Promise<Result<UserDocument | null>>;
+    updateUser(payload: UpdateUserDTO, userId: string, session?: ClientSession): Promise<Result<UserDocument | null>>;
+    updateSensitiveData(payload: IInternalUpdate, emailAddress: string, session?: ClientSession): Promise<Result<UserDocument | null>>;
+    deleteUser(userId: string): Promise<Result<UserDocument | null>>;
 }

@@ -27,6 +27,7 @@ const constant_1 = require("./../../utils/constant");
 const notification_type_1 = require("./../../types/notification.type");
 const email_templates_1 = require("../../utils/email_templates");
 const helper_1 = require("./../../utils/helper");
+const result_1 = require("../../wrapper/result");
 let SecurityService = exports.SecurityService = class SecurityService {
     constructor(jwtService, configService, userService, notificationService, tokenModel) {
         this.jwtService = jwtService;
@@ -47,12 +48,10 @@ let SecurityService = exports.SecurityService = class SecurityService {
                 secret: this.configService.get('JWT_SECRET'),
                 expiresIn: ttl,
             });
-            return token;
+            return new result_1.default(true, token, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (!(error instanceof common_1.InternalServerErrorException))
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async validateToken(token) {
@@ -62,55 +61,55 @@ let SecurityService = exports.SecurityService = class SecurityService {
                 issuer: this.configService.get('JWT_TOKEN_ISSUER'),
                 secret: this.configService.get('JWT_SECRET'),
             });
-            return decodedToken;
+            return new result_1.default(true, decodedToken, null, common_1.HttpStatus.OK);
         }
         catch (error) {
             if (!(error instanceof common_1.InternalServerErrorException))
                 throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async hash(data) {
         try {
             const salt = await bcrypt.genSalt();
             const hash = await bcrypt.hash(data, salt);
-            return hash.toString();
+            return new result_1.default(true, hash.toString(), null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (!(error instanceof common_1.InternalServerErrorException))
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async compare(incomingData, hashedData) {
         try {
             const isMatch = await bcrypt.compare(incomingData, hashedData);
-            return isMatch;
+            return new result_1.default(true, isMatch, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (!(error instanceof common_1.InternalServerErrorException))
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async generateTokens(user, tokenTTL) {
         try {
             const token = await this.signToken(user, tokenTTL);
-            return token;
+            const data = token.getData();
+            if (!data)
+                return new result_1.default(false, null, 'Unable to sign token', common_1.HttpStatus.BAD_REQUEST);
+            return new result_1.default(true, data, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (!(error instanceof common_1.InternalServerErrorException))
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async queueVerificationEmail(emailAddress, subject, emailPurpose) {
         try {
             let message = '';
             const token = await this.generateTokens({ id: '', emailAddress: emailAddress, role: user_types_1.UserRole.USER }, constant_1.JWT_TTL.ACCESS_TOKEN_TTL);
-            const newToken = await this.tokenModel.updateOne({ emailAddress: emailAddress }, { token: token }, { upsert: true });
+            const tokenData = token.getData();
+            if (!tokenData)
+                return new result_1.default(false, null, 'Could not generate token', common_1.HttpStatus.BAD_REQUEST);
+            const newToken = await this.tokenModel.updateOne({ emailAddress: emailAddress }, { token: tokenData }, { upsert: true });
             if (!newToken)
-                throw new common_1.InternalServerErrorException(constant_1.ErrorMessages.INTERNAL_ERROR);
+                return new result_1.default(false, null, 'Unable to update token', common_1.HttpStatus.BAD_REQUEST);
             if (emailPurpose === constant_1.EmailPurpose.EMAIL_VERIFICATION) {
                 const link = `${this.configService.get('VERIFY_EMAIL_URL')}?token=${token}`;
                 message = (0, email_templates_1.createEmailVerificationTemplate)(link);
@@ -129,108 +128,126 @@ let SecurityService = exports.SecurityService = class SecurityService {
                 payload: payload,
             };
             this.notificationService.enqueueNotification(JSON.stringify(notification));
+            return new result_1.default(true, true, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (!(error instanceof common_1.InternalServerErrorException))
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async verifyToken(token) {
         try {
             const tokenExist = await this.tokenModel.findOne({ token: token });
             if (!tokenExist)
-                throw new common_1.UnauthorizedException(constant_1.ErrorMessages.UNAUTHORIZED);
+                return new result_1.default(false, null, 'Token does not exist', common_1.HttpStatus.BAD_REQUEST);
             const decodedToken = await this.validateToken(token);
-            if (decodedToken.emailAddress !== tokenExist.emailAddress)
-                throw new common_1.UnauthorizedException(constant_1.ErrorMessages.TOKEN_EMAIL_MISMATCH);
-            await this.tokenModel.findOneAndDelete({ token });
-            return decodedToken;
+            const decodedTokenData = decodedToken.getData();
+            if (!decodedTokenData)
+                return new result_1.default(false, null, 'Error validating token', common_1.HttpStatus.BAD_REQUEST);
+            if (decodedTokenData.emailAddress !== tokenExist.emailAddress)
+                return new result_1.default(false, null, 'Token mismatch', common_1.HttpStatus.BAD_REQUEST);
+            const deletedToken = await this.tokenModel.findOneAndDelete({ token });
+            if (!deletedToken)
+                return new result_1.default(false, null, 'Token could not be deleted', common_1.HttpStatus.BAD_REQUEST);
+            return new result_1.default(true, decodedToken.getData(), null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (!(error instanceof common_1.InternalServerErrorException))
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async verifyEmail(token) {
         try {
             const decodedToken = await this.verifyToken(token);
-            await this.userService.updateSensitiveData({ verified: true, status: constant_1.Status.ACTIVE }, decodedToken.emailAddress);
-            return;
+            const decodedTokenData = decodedToken.getData();
+            if (!decodedTokenData)
+                return new result_1.default(false, null, 'Token could not be verified', common_1.HttpStatus.BAD_REQUEST);
+            const updateResult = await this.userService.updateSensitiveData({ verified: true, status: constant_1.Status.ACTIVE }, decodedTokenData.emailAddress);
+            const updatedResultData = updateResult.getData();
+            if (!updatedResultData)
+                return new result_1.default(false, null, 'Unable to update sensitive data', common_1.HttpStatus.BAD_REQUEST);
+            return new result_1.default(true, updatedResultData, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (!(error instanceof common_1.InternalServerErrorException))
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async updatePassword(oldPassword, newPassword, userId) {
         try {
-            (0, helper_1.validateObjectId)(userId);
+            const isValidObjectId = (0, helper_1.validateObjectId)(userId);
+            if (!isValidObjectId.getData())
+                return new result_1.default(false, null, `Invalid objectId: ${userId}`, common_1.HttpStatus.BAD_REQUEST);
             const user = await this.userService.getUser(userId);
-            if (!user)
-                throw new common_1.UnauthorizedException(constant_1.ErrorMessages.UNAUTHORIZED);
-            const validPassword = await this.compare(oldPassword, user.password);
-            if (!validPassword)
-                throw new common_1.BadRequestException(constant_1.ErrorMessages.INVALID_REQUEST);
+            const userData = user.getData();
+            if (!userData)
+                return new result_1.default(false, null, `Unable to find user with id: ${userId}`, common_1.HttpStatus.BAD_REQUEST);
+            const validPassword = await this.compare(oldPassword, userData.password);
+            const validPasswordData = validPassword.getData();
+            if (!validPasswordData)
+                return new result_1.default(false, null, 'Password does not match', common_1.HttpStatus.BAD_REQUEST);
             const hashedPassword = await this.hash(newPassword);
-            await this.userService.updateSensitiveData({ password: hashedPassword }, user.emailAddress);
-            return;
+            const hashedPasswordData = hashedPassword.getData();
+            if (!hashedPasswordData)
+                return new result_1.default(false, null, 'Unable to hash password', common_1.HttpStatus.BAD_REQUEST);
+            const updateResult = await this.userService.updateSensitiveData({ password: hashedPasswordData }, userData.emailAddress);
+            const updateResultData = updateResult.getData();
+            if (!updateResultData)
+                return new result_1.default(false, null, 'Unable to update user password', common_1.HttpStatus.BAD_REQUEST);
+            return new result_1.default(true, userData, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (!(error instanceof common_1.InternalServerErrorException))
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async updateEmail(newEmailAddress, userId) {
         try {
-            (0, helper_1.validateObjectId)(userId);
+            const isValidObjectId = (0, helper_1.validateObjectId)(userId);
+            if (!isValidObjectId.getData())
+                return new result_1.default(false, null, `Invalid objectId: ${userId}`, common_1.HttpStatus.BAD_REQUEST);
             const user = await this.userService.getUser(userId);
-            if (!user)
-                throw new common_1.UnauthorizedException(constant_1.ErrorMessages.UNAUTHORIZED);
-            try {
-                const checkNewEmail = await this.userService.findByEmailAddress(newEmailAddress);
-                if (checkNewEmail)
-                    throw new common_1.BadRequestException(constant_1.ErrorMessages.INVALID_REQUEST);
-            }
-            catch (error) {
-                await this.userService.updateSensitiveData({ emailAddress: newEmailAddress, status: constant_1.Status.INACTIVE, verified: false }, user.emailAddress);
-                await this.queueVerificationEmail(newEmailAddress, 'Verify Email', constant_1.EmailPurpose.EMAIL_VERIFICATION);
-            }
-            return;
+            const userData = user.getData();
+            if (!userData)
+                return new result_1.default(false, null, `Unable to find user with id: ${userId}`, common_1.HttpStatus.BAD_REQUEST);
+            const checkNewEmail = await this.userService.findByEmailAddress(newEmailAddress);
+            const checkNewEmailData = checkNewEmail.getData();
+            if (!checkNewEmailData)
+                return new result_1.default(false, null, 'Email address already exists', common_1.HttpStatus.BAD_REQUEST);
+            return new result_1.default(true, userData, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            console.log(error);
-            if (!(error instanceof common_1.InternalServerErrorException))
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async passwordResetRequest(emailAddress) {
         try {
             const subject = 'Password Reset Request';
-            await this.userService.findByEmailAddress(emailAddress);
+            const result = await this.userService.findByEmailAddress(emailAddress);
+            const resultData = result.getData();
+            if (!resultData)
+                return new result_1.default(false, null, `Unable to find user with email address: ${emailAddress}`, common_1.HttpStatus.BAD_REQUEST);
             await this.queueVerificationEmail(emailAddress, subject, constant_1.EmailPurpose.PASSWORD_RESET);
-            return;
+            return new result_1.default(true, true, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (!(error instanceof common_1.InternalServerErrorException))
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async passwordReset(token, password) {
         try {
             const decodedToken = await this.verifyToken(token);
+            const decodedTokenData = decodedToken.getData();
+            if (!decodedTokenData)
+                return new result_1.default(false, null, 'Unable to verify token', common_1.HttpStatus.BAD_REQUEST);
             const hashedPassword = await this.hash(password);
-            await this.userService.updateSensitiveData({ password: hashedPassword }, decodedToken.emailAddress);
+            const hashedPasswordData = hashedPassword.getData();
+            if (!hashedPasswordData)
+                return new result_1.default(false, null, 'Unable to hash user password', common_1.HttpStatus.BAD_REQUEST);
+            const updateResult = await this.userService.updateSensitiveData({ password: hashedPasswordData }, decodedTokenData.emailAddress);
+            const updateResultData = updateResult.getData();
+            if (!updateResultData)
+                return new result_1.default(false, null, 'Unable to update user data', common_1.HttpStatus.BAD_REQUEST);
+            return new result_1.default(true, true, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (!(error instanceof common_1.InternalServerErrorException))
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 };

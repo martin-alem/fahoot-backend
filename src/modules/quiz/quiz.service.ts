@@ -1,8 +1,7 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { Quiz } from './schema/quiz.schema';
 import { CreateQuizDTO } from './dto/create_quiz.dto';
 import { ClientSession, Model } from 'mongoose';
-import { LEVEL } from './../../types/log.types';
 import { validateObjectId } from './../../utils/helper';
 import { IPaginationResult } from './../../types/pagination_result.type';
 import { PaginationDTO } from './dto/pagination.dto';
@@ -10,6 +9,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { LoggerService } from '../logger/logger.service';
 import { TransactionManager } from '../shared/transaction.manager';
 import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
+import Result from 'src/wrapper/result';
 
 @Injectable()
 export class QuizService {
@@ -31,36 +31,38 @@ export class QuizService {
    * Create a new quiz
    * @param payload payload
    * @param userId user id
-   * @returns a promise that is resolved when the Quiz
-   * @throws a BadRequestException if user id is invalid
+   * @returns a promise that resolves to a Result object
    */
-  public async createQuiz(payload: CreateQuizDTO, userId: string): Promise<Quiz> {
+  public async createQuiz(payload: CreateQuizDTO, userId: string): Promise<Result<Quiz | null>> {
     try {
-      validateObjectId(userId);
+      const isValidObjectId = validateObjectId(userId);
+      if (!isValidObjectId.getData()) return new Result<null>(false, null, `Invalid user objectId: ${userId}`, HttpStatus.BAD_REQUEST);
+
       const quiz = await this.quizModel.create({ ...payload, userId });
-      if (!quiz) throw new InternalServerErrorException();
-      return quiz;
+      if (!quiz) return new Result<null>(false, null, 'Unable to create quiz', HttpStatus.BAD_REQUEST);
+
+      return new Result<Quiz>(true, quiz, null, HttpStatus.OK);
     } catch (error) {
-      if (!(error instanceof InternalServerErrorException)) throw error;
-      throw new InternalServerErrorException(error.message);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   /**
    * Gets a single quiz
    * @param quizId quiz id
-   * @returns a promise that is resolved when the Quiz
-   * @throws a BadRequestException if quiz id is invalid
+   * @returns a promise that resolves to a Result object
    */
-  public async getQuizById(quizId: string): Promise<Quiz> {
+  public async getQuizById(quizId: string): Promise<Result<Quiz | null>> {
     try {
-      validateObjectId(quizId);
+      const isValidObjectId = validateObjectId(quizId);
+      if (!isValidObjectId.getData()) return new Result<null>(false, null, `Invalid quiz objectId: ${quizId}`, HttpStatus.BAD_REQUEST);
+
       const quiz = await this.quizModel.findById(quizId);
-      if (!quiz) throw new InternalServerErrorException();
-      return quiz;
+      if (!quiz) return new Result<null>(false, null, 'Quiz not found', HttpStatus.BAD_REQUEST);
+
+      return new Result<Quiz>(true, quiz, null, HttpStatus.OK);
     } catch (error) {
-      if (!(error instanceof InternalServerErrorException)) throw error;
-      throw new InternalServerErrorException(error.message);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -68,12 +70,13 @@ export class QuizService {
    * Gets a paginated result of quizzes
    * @param userId user id
    * @param pagination pagination options
-   * @returns a promise that resolves to a paginationResult
-   * @throws a BadRequestException if quiz id is invalid
+   * @returns a promise that resolves to a Result object
    */
-  public async getQuizzes(userId: string, pagination: PaginationDTO): Promise<IPaginationResult<Quiz>> {
+  public async getQuizzes(userId: string, pagination: PaginationDTO): Promise<Result<IPaginationResult<Quiz> | null>> {
     try {
-      validateObjectId(userId);
+      const isValidObjectId = validateObjectId(userId);
+      if (!isValidObjectId.getData()) return new Result<null>(false, null, `Invalid user objectId: ${userId}`, HttpStatus.BAD_REQUEST);
+
       const { page, pageSize, query } = pagination;
 
       //Preventing page from being 0
@@ -97,10 +100,9 @@ export class QuizService {
         .limit(pageSize)
         .exec();
 
-      return { results, total: totalQuizzes, totalPages };
+      return new Result<IPaginationResult<Quiz>>(true, { results, total: totalQuizzes, totalPages }, null, HttpStatus.OK);
     } catch (error) {
-      if (!(error instanceof InternalServerErrorException)) throw error;
-      throw new InternalServerErrorException(error.message);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -109,20 +111,22 @@ export class QuizService {
    * @param quizId quiz id
    * @param userId user id
    * @param payload payload
-   * @returns a promise the resolves to a quiz
+   * @returns a promise that resolves to a Result object
    */
-  public async updateQuiz(quizId: string, userId: string, payload: Partial<CreateQuizDTO>): Promise<Quiz> {
+  public async updateQuiz(quizId: string, userId: string, payload: Partial<CreateQuizDTO>): Promise<Result<Quiz | null>> {
     try {
-      validateObjectId(quizId);
-      validateObjectId(userId);
+      const isValidQuizObjectId = validateObjectId(userId);
+      if (!isValidQuizObjectId.getData()) return new Result<null>(false, null, `Invalid quiz objectId: ${quizId}`, HttpStatus.BAD_REQUEST);
+
+      const isValidUserObjectId = validateObjectId(userId);
+      if (!isValidUserObjectId.getData()) return new Result<null>(false, null, `Invalid user objectId: ${userId}`, HttpStatus.BAD_REQUEST);
+
       const updatedQuiz = await this.quizModel.findOneAndUpdate({ _id: quizId, userId: userId }, payload, { new: true });
-      if (!updatedQuiz) throw new BadRequestException('Unable to update quiz');
-      return updatedQuiz;
+      if (!updatedQuiz) return new Result<null>(false, null, `Unable to update quiz`, HttpStatus.BAD_REQUEST);
+
+      return new Result<Quiz>(true, updatedQuiz, null, HttpStatus.OK);
     } catch (error) {
-      console.log(error);
-      this.loggerService.log(JSON.stringify({ event: 'error_updating_quiz', description: error.message, level: LEVEL.CRITICAL }));
-      if (error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException(error.message);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -131,9 +135,9 @@ export class QuizService {
    * @param quizId quiz id
    * @param userId user id
    * @param ses mongoose session
-   * @returns void
+   * @returns a promise that resolves to a Result object
    */
-  public async deleteQuiz(quizId: string, userId: string, ses?: ClientSession): Promise<void> {
+  public async deleteQuiz(quizId: string, userId: string, ses?: ClientSession): Promise<Result<Quiz | null>> {
     let session = null;
     try {
       if (ses) {
@@ -141,45 +145,22 @@ export class QuizService {
       } else {
         session = await this.transactionManager.startSession();
       }
-      validateObjectId(quizId);
-      await this.transactionManager.startTransaction();
-      await this.quizModel.findOneAndDelete({ id: quizId, userId: userId }, { session: session });
-      await this.transactionManager.commitTransaction();
-      return;
-    } catch (error) {
-      await this.transactionManager.abortTransaction();
-      if (error instanceof BadRequestException) throw error;
-      if (error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException(error.message);
-    } finally {
-      await this.transactionManager.endSession();
-    }
-  }
 
-  /**
-   * Delete one or more quizzes associated with the given user
-   * @param userId user id
-   * @param ses mongoose session
-   * @returns void
-   */
-  public async deleteQuizzes(userId: string, quizId: string[], ses?: ClientSession): Promise<void> {
-    let session = null;
-    try {
-      if (ses) {
-        session = ses;
-      } else {
-        session = await this.transactionManager.startSession();
-      }
-      validateObjectId(userId);
+      const isValidQuizObjectId = validateObjectId(userId);
+      if (!isValidQuizObjectId.getData()) return new Result<null>(false, null, `Invalid quiz objectId: ${quizId}`, HttpStatus.BAD_REQUEST);
+
       await this.transactionManager.startTransaction();
-      await this.quizModel.deleteMany({ _id: { $in: quizId } }, { session: session });
+      const result = await this.quizModel.findOneAndDelete({ id: quizId, userId: userId }, { session: session });
+
+      if (!result) {
+        await this.transactionManager.abortTransaction();
+        return new Result<null>(false, null, 'Unable to delete quiz', HttpStatus.BAD_REQUEST);
+      }
       await this.transactionManager.commitTransaction();
-      return;
+      return new Result<Quiz>(true, result, null, HttpStatus.OK);
     } catch (error) {
       await this.transactionManager.abortTransaction();
-      if (error instanceof BadRequestException) throw error;
-      if (error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException(error.message);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     } finally {
       await this.transactionManager.endSession();
     }
@@ -189,17 +170,19 @@ export class QuizService {
    * Delete all quizzes associated with a given user
    * @param userId user id
    * @param ses mongoose session
-   * @returns void
+   * @returns a promise that resolves to a Result object
    */
-  public async deleteAllQuizzes(userId: string, ses?: ClientSession): Promise<void> {
+  public async deleteAllQuizzes(userId: string, session?: ClientSession): Promise<Result<boolean | null>> {
     try {
-      validateObjectId(userId);
-      await this.quizModel.deleteMany({ userId: userId }, { session: ses });
-      return;
+      const isValidUserObjectId = validateObjectId(userId);
+      if (!isValidUserObjectId.getData()) return new Result<null>(false, null, `Invalid user objectId: ${userId}`, HttpStatus.BAD_REQUEST);
+
+      const result = await this.quizModel.deleteMany({ userId: userId }, { session: session });
+      if (!result) return new Result<null>(false, null, 'Unable to delete quizzes', HttpStatus.BAD_REQUEST);
+
+      return new Result<boolean>(true, true, null, HttpStatus.OK);
     } catch (error) {
-      if (error instanceof BadRequestException) throw error;
-      if (error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException(error.message);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

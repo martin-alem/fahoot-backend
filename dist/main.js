@@ -6,6 +6,7 @@ const common_1 = require("@nestjs/common");
 const cookieParser = require("cookie-parser");
 const app_module_1 = require("./modules/app/app.module");
 const swagger_1 = require("@nestjs/swagger");
+const global_exception_1 = require("./exception/global.exception");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.use((0, helmet_1.default)());
@@ -23,6 +24,7 @@ async function bootstrap() {
         credentials: true,
         allowedHeaders: ['Access-Control-Allow-Origin', 'Content-Type', 'Authorization'],
     });
+    app.useGlobalFilters(new global_exception_1.AllExceptionsFilter());
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
         disableErrorMessages: process.env.NODE_ENV === 'production' ? true : false,

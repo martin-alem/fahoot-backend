@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NestMiddleware, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { SecurityService } from './../modules/security/security.service';
 import { AuthService } from './../modules/shared/auth.service';
@@ -20,23 +20,23 @@ export class AuthenticationMiddleware implements NestMiddleware {
     try {
       const tokenCookie = req.cookies['_access_token'];
       if (!tokenCookie) {
-        throw new ForbiddenException('Token cookie not found');
+        throw new UnauthorizedException('Access token not found');
       }
 
       const decodedPayload = await this.securityService.validateToken(tokenCookie);
+      const decodedPayloadData = decodedPayload.getData();
+      if (!decodedPayloadData) throw new BadRequestException('Unable to decode token');
 
-      const user = await this.userService.getUser(decodedPayload.id);
-      if (!user) {
-        throw new NotFoundException(`User ${decodedPayload.id} not found`);
+      const user = await this.userService.getUser(decodedPayloadData.id);
+      const userData = user.getData();
+      if (!userData) {
+        throw new BadRequestException(`User ${decodedPayloadData.id} not found`);
       }
-      this.authService.setId(decodedPayload.id);
-      this.authService.setStatus(user.status);
-      this.authService.setRole(decodedPayload.role);
+      this.authService.setId(decodedPayloadData.id);
+      this.authService.setStatus(userData.status);
+      this.authService.setRole(decodedPayloadData.role);
       next();
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
-        throw new ForbiddenException('Invalid token or user');
-      }
       throw error;
     }
   }

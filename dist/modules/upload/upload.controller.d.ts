@@ -9,5 +9,5 @@ export declare class UploadController {
     private readonly loggerService;
     constructor(uploadService: UploadService, loggerService: LoggerService);
     uploadFile(file: Express.Multer.File, payload: ExtraUploadDataDTO, request: Request): Promise<IFileUpload>;
-    deleteFile(key: string, request: Request): Promise<void>;
+    deleteFile(key: string, request: Request): Promise<boolean>;
 }

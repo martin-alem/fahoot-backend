@@ -1,9 +1,10 @@
-import { BadRequestException } from '@nestjs/common';
+import { HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
 import * as crypto from 'crypto';
 import { Types } from 'mongoose';
 import { LoggerService } from './../modules/logger/logger.service';
 import { LEVEL } from './../types/log.types';
+import Result from 'src/wrapper/result';
 
 /**
  * Validates a string to verify if it a valid mongoDB objectID. Logs the error
@@ -11,10 +12,11 @@ import { LEVEL } from './../types/log.types';
  * @param loggerService LoggerService
  * @throws BadRequestException
  */
-export function validateObjectId(objectId: string): void {
+export function validateObjectId(objectId: string): Result<boolean> {
   if (!Types.ObjectId.isValid(objectId)) {
-    throw new BadRequestException('Invalid user ID format');
+    return new Result(false, false, null, HttpStatus.BAD_REQUEST);
   }
+  return new Result(true, true, null, HttpStatus.OK);
 }
 
 export function arrayLimitValidator(limit: number) {
@@ -78,4 +80,15 @@ export function clearCookie(response: Response, options: { [key: string]: string
 export function generateRandomToken(): string {
   const randomToken = crypto.randomBytes(64).toString('hex');
   return randomToken;
+}
+
+export function handleResult<T>(result: Result<T | null>): T {
+  if (!result.isSuccess() || result.getData() === null) {
+    const errorMsg = result.getError() ?? 'An unknown error occurred';
+    const errorCode = result.getErrorCode() ?? 500;
+    throw new HttpException(errorMsg, errorCode);
+  }
+  // At this point, TypeScript cannot deduce that result.getData() is not null,
+  // so we use a type assertion to tell it that result.getData() is of type T.
+  return result.getData() as T;
 }

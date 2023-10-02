@@ -5,16 +5,16 @@ import { IPaginationResult } from './../../types/pagination_result.type';
 import { PaginationDTO } from './dto/pagination.dto';
 import { LoggerService } from '../logger/logger.service';
 import { TransactionManager } from '../shared/transaction.manager';
+import Result from 'src/wrapper/result';
 export declare class QuizService {
     private readonly loggerService;
     private readonly quizModel;
     private readonly transactionManager;
     constructor(loggerService: LoggerService, quizModel: Model<Quiz>, transactionManager: TransactionManager);
-    createQuiz(payload: CreateQuizDTO, userId: string): Promise<Quiz>;
-    getQuizById(quizId: string): Promise<Quiz>;
-    getQuizzes(userId: string, pagination: PaginationDTO): Promise<IPaginationResult<Quiz>>;
-    updateQuiz(quizId: string, userId: string, payload: Partial<CreateQuizDTO>): Promise<Quiz>;
-    deleteQuiz(quizId: string, userId: string, ses?: ClientSession): Promise<void>;
-    deleteQuizzes(userId: string, quizId: string[], ses?: ClientSession): Promise<void>;
-    deleteAllQuizzes(userId: string, ses?: ClientSession): Promise<void>;
+    createQuiz(payload: CreateQuizDTO, userId: string): Promise<Result<Quiz | null>>;
+    getQuizById(quizId: string): Promise<Result<Quiz | null>>;
+    getQuizzes(userId: string, pagination: PaginationDTO): Promise<Result<IPaginationResult<Quiz> | null>>;
+    updateQuiz(quizId: string, userId: string, payload: Partial<CreateQuizDTO>): Promise<Result<Quiz | null>>;
+    deleteQuiz(quizId: string, userId: string, ses?: ClientSession): Promise<Result<Quiz | null>>;
+    deleteAllQuizzes(userId: string, session?: ClientSession): Promise<Result<boolean | null>>;
 }

@@ -1,14 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateRandomToken = exports.clearCookie = exports.setCookie = exports.log = exports.arrayLimitValidator = exports.validateObjectId = void 0;
+exports.handleResult = exports.generateRandomToken = exports.clearCookie = exports.setCookie = exports.log = exports.arrayLimitValidator = exports.validateObjectId = void 0;
 const common_1 = require("@nestjs/common");
 const crypto = require("crypto");
 const mongoose_1 = require("mongoose");
 const log_types_1 = require("./../types/log.types");
+const result_1 = require("../wrapper/result");
 function validateObjectId(objectId) {
     if (!mongoose_1.Types.ObjectId.isValid(objectId)) {
-        throw new common_1.BadRequestException('Invalid user ID format');
+        return new result_1.default(false, false, null, common_1.HttpStatus.BAD_REQUEST);
     }
+    return new result_1.default(true, true, null, common_1.HttpStatus.OK);
 }
 exports.validateObjectId = validateObjectId;
 function arrayLimitValidator(limit) {
@@ -57,4 +59,13 @@ function generateRandomToken() {
     return randomToken;
 }
 exports.generateRandomToken = generateRandomToken;
+function handleResult(result) {
+    if (!result.isSuccess() || result.getData() === null) {
+        const errorMsg = result.getError() ?? 'An unknown error occurred';
+        const errorCode = result.getErrorCode() ?? 500;
+        throw new common_1.HttpException(errorMsg, errorCode);
+    }
+    return result.getData();
+}
+exports.handleResult = handleResult;
 //# sourceMappingURL=helper.js.map

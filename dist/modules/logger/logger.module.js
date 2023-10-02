@@ -12,12 +12,20 @@ const logger_service_1 = require("./logger.service");
 const mongoose_1 = require("@nestjs/mongoose");
 const log_schema_1 = require("./schema/log.schema");
 const constant_1 = require("./../../utils/constant");
+const log_controller_1 = require("./log.controller");
+const apikey_middleware_1 = require("../../middleware/apikey.middleware");
+const config_1 = require("@nestjs/config");
+const shared_module_1 = require("../shared/shared.module");
 let LoggerModule = exports.LoggerModule = class LoggerModule {
+    configure(consumer) {
+        consumer.apply(apikey_middleware_1.APIKeyMiddleware).forRoutes(log_controller_1.LogController);
+    }
 };
 exports.LoggerModule = LoggerModule = __decorate([
     (0, common_1.Global)(),
     (0, common_1.Module)({
-        imports: [mongoose_1.MongooseModule.forFeature([{ name: log_schema_1.Log.name, schema: log_schema_1.LogsSchema }], constant_1.DEFAULT_DATABASE_CONNECTION)],
+        imports: [mongoose_1.MongooseModule.forFeature([{ name: log_schema_1.Log.name, schema: log_schema_1.LogsSchema }], constant_1.DEFAULT_DATABASE_CONNECTION), config_1.ConfigModule, shared_module_1.SharedModule],
+        controllers: [log_controller_1.LogController],
         providers: [logger_service_1.LoggerService],
         exports: [logger_service_1.LoggerService],
     })

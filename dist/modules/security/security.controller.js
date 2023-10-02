@@ -29,6 +29,8 @@ const auth_guard_1 = require("./../../guard/auth.guard");
 const update_password_dto_1 = require("./dto/update_password.dto");
 const update_email_dto_1 = require("./dto/update_email.dto");
 const auth_service_1 = require("../shared/auth.service");
+const response_interceptor_1 = require("../../interceptor/response.interceptor");
+const UserShape_1 = require("../authentication/response/UserShape");
 let SecurityController = exports.SecurityController = class SecurityController {
     constructor(securityService, loggerService, authService) {
         this.securityService = securityService;
@@ -37,8 +39,8 @@ let SecurityController = exports.SecurityController = class SecurityController {
     }
     async emailVerification(token, request) {
         try {
-            await this.securityService.verifyEmail(token);
-            return;
+            const result = await this.securityService.verifyEmail(token);
+            return (0, helper_1.handleResult)(result);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'email_verification_error', error.message, request, log_types_1.LEVEL.CRITICAL);
@@ -49,9 +51,9 @@ let SecurityController = exports.SecurityController = class SecurityController {
         try {
             const id = this.authService.getId();
             const { oldPassword, newPassword } = payload;
-            await this.securityService.updatePassword(oldPassword, newPassword, id);
+            const result = await this.securityService.updatePassword(oldPassword, newPassword, id);
             (0, helper_1.clearCookie)(response, {}, constant_1.ACCESS_TOKEN_COOKIE_NAME, constant_1.REMEMBER_ME_COOKIE_NAME);
-            return;
+            return (0, helper_1.handleResult)(result);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'update_password_error', error.message, request, log_types_1.LEVEL.CRITICAL);
@@ -62,9 +64,9 @@ let SecurityController = exports.SecurityController = class SecurityController {
         try {
             const id = this.authService.getId();
             const { emailAddress } = payload;
-            await this.securityService.updateEmail(emailAddress, id);
+            const result = await this.securityService.updateEmail(emailAddress, id);
             (0, helper_1.clearCookie)(response, {}, constant_1.ACCESS_TOKEN_COOKIE_NAME, constant_1.REMEMBER_ME_COOKIE_NAME);
-            return;
+            return (0, helper_1.handleResult)(result);
         }
         catch (error) {
             console.error(error);
@@ -75,8 +77,8 @@ let SecurityController = exports.SecurityController = class SecurityController {
     async sendVerificationEmail(payload, request) {
         try {
             const { emailAddress, subject, emailPurpose } = payload;
-            await this.securityService.queueVerificationEmail(emailAddress, subject, emailPurpose);
-            return;
+            const result = await this.securityService.queueVerificationEmail(emailAddress, subject, emailPurpose);
+            return (0, helper_1.handleResult)(result);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'send_verification_error', error.message, request, log_types_1.LEVEL.CRITICAL);
@@ -86,8 +88,8 @@ let SecurityController = exports.SecurityController = class SecurityController {
     async passwordResetRequest(payload, request) {
         try {
             const { emailAddress } = payload;
-            await this.securityService.passwordResetRequest(emailAddress);
-            return;
+            const result = await this.securityService.passwordResetRequest(emailAddress);
+            return (0, helper_1.handleResult)(result);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'get_user_error', error.message, request, log_types_1.LEVEL.CRITICAL);
@@ -97,8 +99,8 @@ let SecurityController = exports.SecurityController = class SecurityController {
     async passwordReset(payload, request) {
         try {
             const { password, token } = payload;
-            await this.securityService.passwordReset(token, password);
-            return;
+            const result = await this.securityService.passwordReset(token, password);
+            return (0, helper_1.handleResult)(result);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'get_user_error', error.message, request, log_types_1.LEVEL.CRITICAL);
@@ -108,6 +110,7 @@ let SecurityController = exports.SecurityController = class SecurityController {
 };
 __decorate([
     (0, throttler_1.Throttle)(constant_1.EMAIL_VERIFICATION_REQUEST.LIMIT, constant_1.EMAIL_VERIFICATION_REQUEST.TTL),
+    (0, common_1.UseInterceptors)(new response_interceptor_1.ResponseInterceptor(UserShape_1.UserShape)),
     (0, common_1.Post)('/email_verification'),
     __param(0, (0, common_1.Body)('token')),
     __param(1, (0, common_1.Req)()),
@@ -120,6 +123,7 @@ __decorate([
     (0, auth_decorator_1.Role)(user_types_1.UserRole.USER),
     (0, auth_decorator_1.Active)(constant_1.Status.ACTIVE),
     (0, common_1.UseGuards)(auth_guard_1.AuthorizationGuard),
+    (0, common_1.UseInterceptors)(new response_interceptor_1.ResponseInterceptor(UserShape_1.UserShape)),
     (0, common_1.Post)('/update_password'),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Req)()),

@@ -4,6 +4,7 @@ import { InternalServerErrorException, ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from './modules/app/app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { AllExceptionsFilter } from './exception/global.exception';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
@@ -21,6 +22,8 @@ async function bootstrap(): Promise<void> {
     credentials: true, // include this line to allow cookies
     allowedHeaders: ['Access-Control-Allow-Origin', 'Content-Type', 'Authorization'], // Allow necessary headers
   });
+
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   app.useGlobalPipes(
     new ValidationPipe({

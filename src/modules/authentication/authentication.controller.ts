@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Post, Req, Res, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Post, Req, Res, UseInterceptors } from '@nestjs/common';
 import { SignUpDTO } from './dto/signup.dto';
 import { AuthenticationService } from './authentication.service';
 import { SignInDTO } from './dto/signin.dto';
@@ -15,7 +15,7 @@ import {
 import { User } from '../user/schema/user.schema';
 import { LoggerService } from '../logger/logger.service';
 import { Request, Response } from 'express';
-import { clearCookie, log, setCookie } from './../../utils/helper';
+import { clearCookie, handleResult, log, setCookie } from './../../utils/helper';
 import { SecurityService } from '../security/security.service';
 import { ResponseInterceptor } from './../../interceptor/response.interceptor';
 import { UserShape } from './response/UserShape';
@@ -40,12 +40,19 @@ export class AuthenticationController {
   public async signup(@Body() payload: SignUpDTO, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<User> {
     try {
       const user = await this.authenticationService.signUp(payload);
+      const userData = user.getData();
+      if (!userData) throw new BadRequestException('Unable to signup user');
+
       const accessToken = await this.securityService.generateTokens(
-        { id: user._id, emailAddress: user.emailAddress, role: user.role },
+        { id: userData._id, emailAddress: userData.emailAddress, role: userData.role },
         JWT_TTL.ACCESS_TOKEN_TTL,
       );
-      setCookie(response, ACCESS_TOKEN_COOKIE_NAME, accessToken, COOKIE.ACCESS_TOKEN_COOKIE_TTL);
-      return user;
+
+      const accessTokenData = accessToken.getData();
+      if (!accessTokenData) throw new BadRequestException('Could not generate access token');
+
+      setCookie(response, ACCESS_TOKEN_COOKIE_NAME, accessTokenData, COOKIE.ACCESS_TOKEN_COOKIE_TTL);
+      return handleResult<User>(user);
     } catch (error) {
       log(this.loggerService, 'manual_signup-error', error.message, request);
       throw error;
@@ -57,12 +64,19 @@ export class AuthenticationController {
   public async googleSignup(@Body() payload: GoogleOAuthDTO, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<User> {
     try {
       const user = await this.authenticationService.googleSignUp(payload.credential);
+      const userData = user.getData();
+      if (!userData) throw new BadRequestException('Unable to signup user using google');
+
       const accessToken = await this.securityService.generateTokens(
-        { id: user._id, emailAddress: user.emailAddress, role: user.role },
+        { id: userData._id, emailAddress: userData.emailAddress, role: userData.role },
         JWT_TTL.ACCESS_TOKEN_TTL,
       );
-      setCookie(response, ACCESS_TOKEN_COOKIE_NAME, accessToken, COOKIE.ACCESS_TOKEN_COOKIE_TTL);
-      return user;
+
+      const accessTokenData = accessToken.getData();
+      if (!accessTokenData) throw new BadRequestException('Could not generate access token');
+
+      setCookie(response, ACCESS_TOKEN_COOKIE_NAME, accessTokenData, COOKIE.ACCESS_TOKEN_COOKIE_TTL);
+      return handleResult<User>(user);
     } catch (error) {
       log(this.loggerService, 'google_signup-error', error.message, request);
       throw error;
@@ -75,17 +89,27 @@ export class AuthenticationController {
   public async signin(@Body() payload: SignInDTO, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<User> {
     try {
       const user = await this.authenticationService.signIn(payload);
+      const userData = user.getData();
+      if (!userData) throw new BadRequestException('Unable to signin user');
+
       const accessToken = await this.securityService.generateTokens(
-        { id: user._id, emailAddress: user.emailAddress, role: user.role },
+        { id: userData._id, emailAddress: userData.emailAddress, role: userData.role },
         JWT_TTL.ACCESS_TOKEN_TTL,
       );
       const rememberMeToken = await this.securityService.generateTokens(
-        { id: user._id, emailAddress: user.emailAddress, role: user.role },
+        { id: userData._id, emailAddress: userData.emailAddress, role: userData.role },
         JWT_TTL.REMEMBER_ME_TOKEN_TTL,
       );
-      setCookie(response, ACCESS_TOKEN_COOKIE_NAME, accessToken, COOKIE.ACCESS_TOKEN_COOKIE_TTL);
-      if (payload.rememberMe) setCookie(response, REMEMBER_ME_COOKIE_NAME, rememberMeToken, COOKIE.REMEMBER_ME_COOKIE_TTL);
-      return user;
+      const accessTokenData = accessToken.getData();
+      if (!accessTokenData) throw new BadRequestException('Could not generate access token');
+
+      const rememberMeTokenData = rememberMeToken.getData();
+      if (!rememberMeTokenData) throw new BadRequestException('Could not generate rememberMe token');
+
+      setCookie(response, ACCESS_TOKEN_COOKIE_NAME, accessTokenData, COOKIE.ACCESS_TOKEN_COOKIE_TTL);
+      if (payload.rememberMe) setCookie(response, REMEMBER_ME_COOKIE_NAME, rememberMeTokenData, COOKIE.REMEMBER_ME_COOKIE_TTL);
+
+      return handleResult<User>(user);
     } catch (error) {
       log(this.loggerService, 'manual_signin-error', error.message, request);
       throw error;
@@ -97,12 +121,19 @@ export class AuthenticationController {
   public async googleSignin(@Body() payload: GoogleOAuthDTO, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<User> {
     try {
       const user = await this.authenticationService.googleSignIn(payload.credential);
+      const userData = user.getData();
+      if (!userData) throw new BadRequestException('Unable to signin user using google');
+
       const accessToken = await this.securityService.generateTokens(
-        { id: user._id, emailAddress: user.emailAddress, role: user.role },
+        { id: userData._id, emailAddress: userData.emailAddress, role: userData.role },
         JWT_TTL.ACCESS_TOKEN_TTL,
       );
-      setCookie(response, ACCESS_TOKEN_COOKIE_NAME, accessToken, COOKIE.ACCESS_TOKEN_COOKIE_TTL);
-      return user;
+
+      const accessTokenData = accessToken.getData();
+      if (!accessTokenData) throw new BadRequestException('Could not generate access token');
+      setCookie(response, ACCESS_TOKEN_COOKIE_NAME, accessTokenData, COOKIE.ACCESS_TOKEN_COOKIE_TTL);
+
+      return handleResult<User>(user);
     } catch (error) {
       log(this.loggerService, 'google_signin-error', error.message, request);
       throw error;
@@ -111,14 +142,18 @@ export class AuthenticationController {
 
   @Throttle(SIGNIN_REQUEST.LIMIT, SIGNIN_REQUEST.TTL)
   @Post('/auto_login')
-  public async autoLogin(@Req() request: Request): Promise<IAuthUser> {
+  public async autoLogin(@Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<IAuthUser | null> {
     try {
       const tokenCookie = request.cookies[REMEMBER_ME_COOKIE_NAME];
       if (!tokenCookie) {
-        throw new ForbiddenException('Token cookie not found');
+        response.status(204);
+        return null;
       }
       const decodedPayload = await this.securityService.validateToken(tokenCookie);
-      return decodedPayload;
+
+      if (!decodedPayload.isSuccess()) throw new BadRequestException('Unable to decode payload');
+
+      return handleResult<IAuthUser | null>(decodedPayload);
     } catch (error) {
       log(this.loggerService, 'auto_signin-error', error.message, request);
       throw error;

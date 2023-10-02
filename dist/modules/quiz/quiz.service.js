@@ -16,12 +16,12 @@ exports.QuizService = void 0;
 const common_1 = require("@nestjs/common");
 const quiz_schema_1 = require("./schema/quiz.schema");
 const mongoose_1 = require("mongoose");
-const log_types_1 = require("./../../types/log.types");
 const helper_1 = require("./../../utils/helper");
 const mongoose_2 = require("@nestjs/mongoose");
 const logger_service_1 = require("../logger/logger.service");
 const transaction_manager_1 = require("../shared/transaction.manager");
 const constant_1 = require("./../../utils/constant");
+const result_1 = require("../../wrapper/result");
 let QuizService = exports.QuizService = class QuizService {
     constructor(loggerService, quizModel, transactionManager) {
         this.loggerService = loggerService;
@@ -30,35 +30,37 @@ let QuizService = exports.QuizService = class QuizService {
     }
     async createQuiz(payload, userId) {
         try {
-            (0, helper_1.validateObjectId)(userId);
+            const isValidObjectId = (0, helper_1.validateObjectId)(userId);
+            if (!isValidObjectId.getData())
+                return new result_1.default(false, null, `Invalid user objectId: ${userId}`, common_1.HttpStatus.BAD_REQUEST);
             const quiz = await this.quizModel.create({ ...payload, userId });
             if (!quiz)
-                throw new common_1.InternalServerErrorException();
-            return quiz;
+                return new result_1.default(false, null, 'Unable to create quiz', common_1.HttpStatus.BAD_REQUEST);
+            return new result_1.default(true, quiz, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (!(error instanceof common_1.InternalServerErrorException))
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async getQuizById(quizId) {
         try {
-            (0, helper_1.validateObjectId)(quizId);
+            const isValidObjectId = (0, helper_1.validateObjectId)(quizId);
+            if (!isValidObjectId.getData())
+                return new result_1.default(false, null, `Invalid quiz objectId: ${quizId}`, common_1.HttpStatus.BAD_REQUEST);
             const quiz = await this.quizModel.findById(quizId);
             if (!quiz)
-                throw new common_1.InternalServerErrorException();
-            return quiz;
+                return new result_1.default(false, null, 'Quiz not found', common_1.HttpStatus.BAD_REQUEST);
+            return new result_1.default(true, quiz, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (!(error instanceof common_1.InternalServerErrorException))
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async getQuizzes(userId, pagination) {
         try {
-            (0, helper_1.validateObjectId)(userId);
+            const isValidObjectId = (0, helper_1.validateObjectId)(userId);
+            if (!isValidObjectId.getData())
+                return new result_1.default(false, null, `Invalid user objectId: ${userId}`, common_1.HttpStatus.BAD_REQUEST);
             const { page, pageSize, query } = pagination;
             const skip = (page == 0 ? 0 : page - 1) * pageSize;
             const sortField = pagination.sortField ?? 'published';
@@ -77,29 +79,27 @@ let QuizService = exports.QuizService = class QuizService {
                 .skip(skip)
                 .limit(pageSize)
                 .exec();
-            return { results, total: totalQuizzes, totalPages };
+            return new result_1.default(true, { results, total: totalQuizzes, totalPages }, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (!(error instanceof common_1.InternalServerErrorException))
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async updateQuiz(quizId, userId, payload) {
         try {
-            (0, helper_1.validateObjectId)(quizId);
-            (0, helper_1.validateObjectId)(userId);
+            const isValidQuizObjectId = (0, helper_1.validateObjectId)(userId);
+            if (!isValidQuizObjectId.getData())
+                return new result_1.default(false, null, `Invalid quiz objectId: ${quizId}`, common_1.HttpStatus.BAD_REQUEST);
+            const isValidUserObjectId = (0, helper_1.validateObjectId)(userId);
+            if (!isValidUserObjectId.getData())
+                return new result_1.default(false, null, `Invalid user objectId: ${userId}`, common_1.HttpStatus.BAD_REQUEST);
             const updatedQuiz = await this.quizModel.findOneAndUpdate({ _id: quizId, userId: userId }, payload, { new: true });
             if (!updatedQuiz)
-                throw new common_1.BadRequestException('Unable to update quiz');
-            return updatedQuiz;
+                return new result_1.default(false, null, `Unable to update quiz`, common_1.HttpStatus.BAD_REQUEST);
+            return new result_1.default(true, updatedQuiz, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            console.log(error);
-            this.loggerService.log(JSON.stringify({ event: 'error_updating_quiz', description: error.message, level: log_types_1.LEVEL.CRITICAL }));
-            if (error instanceof common_1.BadRequestException)
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async deleteQuiz(quizId, userId, ses) {
@@ -111,63 +111,38 @@ let QuizService = exports.QuizService = class QuizService {
             else {
                 session = await this.transactionManager.startSession();
             }
-            (0, helper_1.validateObjectId)(quizId);
+            const isValidQuizObjectId = (0, helper_1.validateObjectId)(userId);
+            if (!isValidQuizObjectId.getData())
+                return new result_1.default(false, null, `Invalid quiz objectId: ${quizId}`, common_1.HttpStatus.BAD_REQUEST);
             await this.transactionManager.startTransaction();
-            await this.quizModel.findOneAndDelete({ id: quizId, userId: userId }, { session: session });
+            const result = await this.quizModel.findOneAndDelete({ id: quizId, userId: userId }, { session: session });
+            if (!result) {
+                await this.transactionManager.abortTransaction();
+                return new result_1.default(false, null, 'Unable to delete quiz', common_1.HttpStatus.BAD_REQUEST);
+            }
             await this.transactionManager.commitTransaction();
-            return;
+            return new result_1.default(true, result, null, common_1.HttpStatus.OK);
         }
         catch (error) {
             await this.transactionManager.abortTransaction();
-            if (error instanceof common_1.BadRequestException)
-                throw error;
-            if (error instanceof common_1.BadRequestException)
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
         finally {
             await this.transactionManager.endSession();
         }
     }
-    async deleteQuizzes(userId, quizId, ses) {
-        let session = null;
+    async deleteAllQuizzes(userId, session) {
         try {
-            if (ses) {
-                session = ses;
-            }
-            else {
-                session = await this.transactionManager.startSession();
-            }
-            (0, helper_1.validateObjectId)(userId);
-            await this.transactionManager.startTransaction();
-            await this.quizModel.deleteMany({ _id: { $in: quizId } }, { session: session });
-            await this.transactionManager.commitTransaction();
-            return;
+            const isValidUserObjectId = (0, helper_1.validateObjectId)(userId);
+            if (!isValidUserObjectId.getData())
+                return new result_1.default(false, null, `Invalid user objectId: ${userId}`, common_1.HttpStatus.BAD_REQUEST);
+            const result = await this.quizModel.deleteMany({ userId: userId }, { session: session });
+            if (!result)
+                return new result_1.default(false, null, 'Unable to delete quizzes', common_1.HttpStatus.BAD_REQUEST);
+            return new result_1.default(true, true, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            await this.transactionManager.abortTransaction();
-            if (error instanceof common_1.BadRequestException)
-                throw error;
-            if (error instanceof common_1.BadRequestException)
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
-        }
-        finally {
-            await this.transactionManager.endSession();
-        }
-    }
-    async deleteAllQuizzes(userId, ses) {
-        try {
-            (0, helper_1.validateObjectId)(userId);
-            await this.quizModel.deleteMany({ userId: userId }, { session: ses });
-            return;
-        }
-        catch (error) {
-            if (error instanceof common_1.BadRequestException)
-                throw error;
-            if (error instanceof common_1.BadRequestException)
-                throw error;
-            throw new common_1.InternalServerErrorException(error.message);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 };

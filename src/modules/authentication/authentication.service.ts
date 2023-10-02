@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { SecurityService } from '../security/security.service';
 import { IUser } from './../../types/user.types';
@@ -9,6 +9,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { ConfigService } from '@nestjs/config';
 import { SignInDTO } from './dto/signin.dto';
 import { UserDocument } from '../user/schema/user.schema';
+import Result from 'src/wrapper/result';
 const Client = new OAuth2Client();
 
 /**
@@ -28,61 +29,78 @@ export class AuthenticationService {
     this.configService = configService;
   }
 
-  public async signUp(payload: SignUpDTO): Promise<UserDocument> {
+  public async signUp(payload: SignUpDTO): Promise<Result<UserDocument | null>> {
     try {
       const user = await this.userService.createUser({ ...payload, verified: false, status: Status.INACTIVE });
-      await this.securityService.queueVerificationEmail(user.emailAddress, 'Verify Email', EmailPurpose.EMAIL_VERIFICATION);
-      return user;
+      const userData = user.getData();
+      if (!userData) return new Result<null>(false, null, 'Could not create user', HttpStatus.BAD_REQUEST);
+
+      const result = await this.securityService.queueVerificationEmail(userData.emailAddress, 'Verify Email', EmailPurpose.EMAIL_VERIFICATION);
+
+      if (!result.isSuccess) return new Result<null>(false, null, 'Could not enqueue verification email', HttpStatus.BAD_REQUEST);
+
+      return new Result<UserDocument>(true, userData, null, HttpStatus.OK);
     } catch (error) {
-      if (error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  public async googleSignUp(payload: string): Promise<UserDocument> {
+  public async googleSignUp(payload: string): Promise<Result<UserDocument | null>> {
     try {
       const googleUser = await this.googleOAuthVerification(payload);
-      const user = await this.userService.createUser({ ...googleUser, authenticationMethod: AuthenticationMethod.GOOGLE_OAUTH });
-      return user;
+      const googleUserData = googleUser.getData();
+      if (!googleUserData) return new Result<null>(false, null, 'Could not get user data from google', HttpStatus.BAD_REQUEST);
+
+      const user = await this.userService.createUser({ ...googleUserData, authenticationMethod: AuthenticationMethod.GOOGLE_OAUTH });
+      const userData = user.getData();
+      if (!userData) return new Result<null>(false, null, 'Could not create user using google account', HttpStatus.BAD_REQUEST);
+
+      return new Result<UserDocument>(true, userData, null, HttpStatus.OK);
     } catch (error) {
-      if (error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  public async signIn(payload: SignInDTO): Promise<UserDocument> {
+  public async signIn(payload: SignInDTO): Promise<Result<UserDocument | null>> {
     try {
       const { emailAddress, password } = payload;
       const user = await this.userService.findByEmailAddress(emailAddress);
-      const passwordMatched = await this.securityService.compare(password, user.password);
-      if (!passwordMatched) throw new BadRequestException(ErrorMessages.INVALID_LOGIN);
-      return user;
+      const userData = user.getData();
+      if (!userData) return new Result<null>(false, null, 'Could not find email address', HttpStatus.BAD_REQUEST);
+
+      const passwordMatched = await this.securityService.compare(password, userData.password);
+      if (!passwordMatched.getData()) return new Result<null>(false, null, 'Invalid password', HttpStatus.BAD_REQUEST);
+
+      return new Result<UserDocument>(true, userData, null, HttpStatus.OK);
     } catch (error) {
-      if (error instanceof BadRequestException) throw error;
-      if (error instanceof NotFoundException) throw new BadRequestException(ErrorMessages.INVALID_LOGIN);
-      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  public async googleSignIn(payload: string): Promise<UserDocument> {
+  public async googleSignIn(payload: string): Promise<Result<UserDocument | null>> {
     try {
       const googleUser = await this.googleOAuthVerification(payload);
-      const user = await this.userService.findByEmailAddress(googleUser.emailAddress);
-      return user;
+      const googleUserData = googleUser.getData();
+      if (!googleUserData) return new Result<null>(false, null, 'Could not get user data from google', HttpStatus.BAD_REQUEST);
+
+      const user = await this.userService.findByEmailAddress(googleUserData.emailAddress);
+      const userData = user.getData();
+      if (!userData) return new Result<null>(false, null, 'Could not find email address for google signin', HttpStatus.BAD_REQUEST);
+
+      return new Result<UserDocument>(true, userData, null, HttpStatus.OK);
     } catch (error) {
-      if (error instanceof BadRequestException) throw error;
-      if (error instanceof NotFoundException) throw new BadRequestException(ErrorMessages.INVALID_LOGIN);
-      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  public async googleOAuthVerification(token: string): Promise<IUser> {
+  public async googleOAuthVerification(token: string): Promise<Result<IUser | null>> {
     const ticket = await Client.verifyIdToken({ idToken: token, audience: this.configService.get<string>('GOOGLE_CLIENT_KEY') });
     const googlePayload = ticket.getPayload();
     if (!googlePayload) throw new BadRequestException(ErrorMessages.GOOGLE_OAUTH_FAILED);
-    if (!googlePayload.given_name || !googlePayload.family_name || !googlePayload.email || !googlePayload.email_verified || !googlePayload.picture)
-      throw new BadRequestException(ErrorMessages.GOOGLE_OAUTH_FAILED);
-    if (!googlePayload.email_verified) throw new BadRequestException(ErrorMessages.GOOGLE_OAUTH_FAILED);
+    if (!googlePayload.given_name || !googlePayload.family_name || !googlePayload.email || !googlePayload.email_verified || !googlePayload.picture) {
+      return new Result<null>(false, null, 'Invalid google payload', HttpStatus.BAD_REQUEST);
+    }
+    if (!googlePayload.email_verified) return new Result<null>(false, null, 'Google authentication failed', HttpStatus.BAD_REQUEST);
     const googleUser = {
       firstName: googlePayload.given_name,
       lastName: googlePayload.family_name,
@@ -91,6 +109,6 @@ export class AuthenticationService {
       avatarUrl: googlePayload.picture,
       status: Status.ACTIVE,
     };
-    return googleUser;
+    return new Result<IUser>(true, googleUser, null, HttpStatus.OK);
   }
 }

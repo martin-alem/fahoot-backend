@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UPLOAD_REQUEST = exports.UPDATE_EMAIL_REQUEST = exports.UPDATE_PASSWORD_REQUEST = exports.LOGOUT_REQUEST = exports.SIGNIN_REQUEST = exports.SIGNUP_REQUEST = exports.DELETE_QUIZ_REQUEST = exports.UPDATE_QUIZ_REQUEST = exports.GET_QUIZZES_REQUEST = exports.GET_QUIZ_REQUEST = exports.CREATE_QUIZ_REQUEST = exports.DELETE_USER_REQUEST = exports.UPDATE_USER_REQUEST = exports.GET_USER_REQUEST = exports.CREATE_USER_REQUEST = exports.PASSWORD_RESET = exports.PASSWORD_RESET_REQUEST = exports.SEND_VERIFICATION_EMAIL_REQUEST = exports.EMAIL_VERIFICATION_REQUEST = exports.AuthenticationMethod = exports.VERIFICATION_TOKEN_TTL = exports.COOKIE = exports.JWT_TTL = exports.EmailPurpose = exports.QuestionType = exports.Status = exports.CollectName = exports.UploadDestination = exports.QuizStatus = exports.DEFAULT_DATABASE_CONNECTION = exports.SPACES_ROOT = exports.REMEMBER_ME_COOKIE_NAME = exports.ACCESS_TOKEN_COOKIE_NAME = exports.MAX_QUESTION_PER_QUIZ = exports.ErrorMessages = void 0;
+exports.LOG_REQUEST = exports.UPLOAD_REQUEST = exports.UPDATE_EMAIL_REQUEST = exports.UPDATE_PASSWORD_REQUEST = exports.LOGOUT_REQUEST = exports.SIGNIN_REQUEST = exports.SIGNUP_REQUEST = exports.DELETE_QUIZ_REQUEST = exports.UPDATE_QUIZ_REQUEST = exports.GET_QUIZZES_REQUEST = exports.GET_QUIZ_REQUEST = exports.CREATE_QUIZ_REQUEST = exports.DELETE_USER_REQUEST = exports.UPDATE_USER_REQUEST = exports.GET_USER_REQUEST = exports.CREATE_USER_REQUEST = exports.PASSWORD_RESET = exports.PASSWORD_RESET_REQUEST = exports.SEND_VERIFICATION_EMAIL_REQUEST = exports.EMAIL_VERIFICATION_REQUEST = exports.AuthenticationMethod = exports.VERIFICATION_TOKEN_TTL = exports.COOKIE = exports.JWT_TTL = exports.EmailPurpose = exports.QuestionType = exports.Status = exports.CollectName = exports.UploadDestination = exports.QuizStatus = exports.MAX_FILE_SIZE = exports.DEFAULT_DATABASE_CONNECTION = exports.SPACES_ROOT = exports.REMEMBER_ME_COOKIE_NAME = exports.ACCESS_TOKEN_COOKIE_NAME = exports.MAX_QUESTION_PER_QUIZ = exports.ErrorMessages = void 0;
 var ErrorMessages;
 (function (ErrorMessages) {
     ErrorMessages["EMAIL_NOT_FOUND"] = "User with provided email address was not found";
@@ -22,6 +22,7 @@ exports.ACCESS_TOKEN_COOKIE_NAME = '_access_token';
 exports.REMEMBER_ME_COOKIE_NAME = '_remember_me_';
 exports.SPACES_ROOT = 'uploads';
 exports.DEFAULT_DATABASE_CONNECTION = 'fahoot_database_connection';
+exports.MAX_FILE_SIZE = 1.1e7;
 var QuizStatus;
 (function (QuizStatus) {
     QuizStatus["PUBLISHED"] = "published";
@@ -169,4 +170,9 @@ var UPLOAD_REQUEST;
     UPLOAD_REQUEST[UPLOAD_REQUEST["LIMIT"] = 50] = "LIMIT";
     UPLOAD_REQUEST[UPLOAD_REQUEST["TTL"] = 60] = "TTL";
 })(UPLOAD_REQUEST || (exports.UPLOAD_REQUEST = UPLOAD_REQUEST = {}));
+var LOG_REQUEST;
+(function (LOG_REQUEST) {
+    LOG_REQUEST[LOG_REQUEST["LIMIT"] = 500] = "LIMIT";
+    LOG_REQUEST[LOG_REQUEST["TTL"] = 60] = "TTL";
+})(LOG_REQUEST || (exports.LOG_REQUEST = LOG_REQUEST = {}));
 //# sourceMappingURL=constant.js.map

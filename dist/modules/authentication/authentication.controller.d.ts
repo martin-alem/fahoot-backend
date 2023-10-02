@@ -16,7 +16,7 @@ export declare class AuthenticationController {
     googleSignup(payload: GoogleOAuthDTO, request: Request, response: Response): Promise<User>;
     signin(payload: SignInDTO, request: Request, response: Response): Promise<User>;
     googleSignin(payload: GoogleOAuthDTO, request: Request, response: Response): Promise<User>;
-    autoLogin(request: Request): Promise<IAuthUser>;
+    autoLogin(request: Request, response: Response): Promise<IAuthUser | null>;
     logout(response: Response): void;
     clearRememberMe(response: Response): void;
 }

@@ -22,6 +22,7 @@ const constant_1 = require("./../../utils/constant");
 const helper_1 = require("./../../utils/helper");
 const transaction_manager_1 = require("../shared/transaction.manager");
 const quiz_service_1 = require("../quiz/quiz.service");
+const result_1 = require("../../wrapper/result");
 let UserService = exports.UserService = class UserService {
     constructor(securityService, userModel, transactionManager, quizService) {
         this.securityService = securityService;
@@ -33,95 +34,97 @@ let UserService = exports.UserService = class UserService {
         try {
             const userExist = await this.userModel.findOne({ emailAddress: payload.emailAddress });
             if (userExist)
-                throw new common_1.BadRequestException(`User ${payload.emailAddress} already exist`);
+                return new result_1.default(false, null, `User ${payload.emailAddress} already exist`, common_1.HttpStatus.BAD_REQUEST);
             let hashedPassword = null;
+            let hashedPasswordData = null;
             if (payload.password) {
                 hashedPassword = await this.securityService.hash(payload.password);
+                hashedPasswordData = hashedPassword.getData();
+                if (!hashedPasswordData)
+                    return new result_1.default(false, null, 'Unable to hash password', common_1.HttpStatus.BAD_REQUEST);
             }
-            const user = await this.userModel.create([{ ...payload, password: hashedPassword }], { session: session });
-            return user[0];
+            const user = await this.userModel.create([{ ...payload, password: hashedPasswordData }], { session: session });
+            return new result_1.default(true, user[0], null, common_1.HttpStatus.CREATED);
         }
         catch (error) {
-            if (error instanceof common_1.BadRequestException)
-                throw error;
-            throw new common_1.InternalServerErrorException(constant_1.ErrorMessages.INTERNAL_ERROR);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async getUser(userId) {
         try {
-            (0, helper_1.validateObjectId)(userId);
+            const isValidObjectId = (0, helper_1.validateObjectId)(userId);
+            if (!isValidObjectId.getData())
+                return new result_1.default(false, null, `Invalid objectId: ${userId}`, common_1.HttpStatus.BAD_REQUEST);
             const user = await this.userModel.findById(userId);
             if (!user)
-                throw new common_1.NotFoundException(`User ${userId} not found`);
-            return user;
+                return new result_1.default(false, null, `User ${userId} not found`, common_1.HttpStatus.BAD_REQUEST);
+            return new result_1.default(true, user, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (error instanceof common_1.BadRequestException || error instanceof common_1.NotFoundException)
-                throw error;
-            throw new common_1.InternalServerErrorException(constant_1.ErrorMessages.INTERNAL_ERROR);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async findByEmailAddress(emailAddress) {
         try {
             const user = await this.userModel.findOne({ emailAddress });
             if (!user)
-                throw new common_1.BadRequestException(constant_1.ErrorMessages.USER_NOT_FOUND);
-            return user;
+                return new result_1.default(false, null, `User with ${emailAddress} not found`, common_1.HttpStatus.BAD_REQUEST);
+            return new result_1.default(true, user, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (error instanceof common_1.BadRequestException)
-                throw error;
-            throw new common_1.InternalServerErrorException(constant_1.ErrorMessages.INTERNAL_ERROR);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async updateUser(payload, userId, session) {
         try {
-            (0, helper_1.validateObjectId)(userId);
+            const isValidObjectId = (0, helper_1.validateObjectId)(userId);
+            if (!isValidObjectId.getData())
+                return new result_1.default(false, null, `Invalid objectId: ${userId}`, common_1.HttpStatus.BAD_REQUEST);
             const updatedUser = await this.userModel.findByIdAndUpdate(userId, payload, { new: true, session: session });
             if (!updatedUser)
-                throw new common_1.BadRequestException('Unable to update user');
-            return updatedUser;
+                return new result_1.default(false, null, 'unable to update user', common_1.HttpStatus.BAD_REQUEST);
+            return new result_1.default(true, updatedUser, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (error instanceof common_1.BadRequestException)
-                throw error;
-            throw new common_1.InternalServerErrorException(constant_1.ErrorMessages.INTERNAL_ERROR);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async updateSensitiveData(payload, emailAddress, session) {
         try {
             const updatedUser = await this.userModel.findOneAndUpdate({ emailAddress: emailAddress }, payload, { new: true, session: session });
             if (!updatedUser)
-                throw new common_1.BadRequestException('Unable to update user');
-            return;
+                return new result_1.default(false, null, 'Unable to update sensitive data', common_1.HttpStatus.BAD_REQUEST);
+            return new result_1.default(true, null, null, common_1.HttpStatus.OK);
         }
         catch (error) {
-            if (error instanceof common_1.BadRequestException)
-                throw error;
-            throw new common_1.InternalServerErrorException(constant_1.ErrorMessages.INTERNAL_ERROR);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-    async deleteUser(userId, ses) {
-        let session = null;
+    async deleteUser(userId) {
         try {
-            if (ses) {
-                session = ses;
+            const session = await this.transactionManager.startSession();
+            const isValidObjectId = (0, helper_1.validateObjectId)(userId);
+            if (!isValidObjectId.getData()) {
+                await this.transactionManager.abortTransaction();
+                return new result_1.default(false, null, `Invalid objectId: ${userId}`, common_1.HttpStatus.BAD_REQUEST);
             }
-            else {
-                session = await this.transactionManager.startSession();
-            }
-            (0, helper_1.validateObjectId)(userId);
             await this.transactionManager.startTransaction();
-            await this.userModel.findByIdAndDelete(userId, { session: session });
-            await this.quizService.deleteAllQuizzes(userId, session);
+            const deletedUser = await this.userModel.findByIdAndDelete(userId, { session: session });
+            if (!deletedUser) {
+                await this.transactionManager.abortTransaction();
+                return new result_1.default(false, null, `Could not delete user`, common_1.HttpStatus.BAD_REQUEST);
+            }
+            const deleteQuizzes = await this.quizService.deleteAllQuizzes(userId, session);
+            if (!deleteQuizzes.isSuccess()) {
+                await this.transactionManager.abortTransaction();
+                return new result_1.default(false, null, `Could not delete user quizzes`, common_1.HttpStatus.BAD_REQUEST);
+            }
             await this.transactionManager.commitTransaction();
-            return;
+            return new result_1.default(true, deletedUser, null, common_1.HttpStatus.OK);
         }
         catch (error) {
             await this.transactionManager.abortTransaction();
-            if (!(error instanceof common_1.InternalServerErrorException))
-                throw error;
-            throw new common_1.InternalServerErrorException(constant_1.ErrorMessages.INTERNAL_ERROR);
+            return new result_1.default(false, null, error.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
         finally {
             await this.transactionManager.endSession();

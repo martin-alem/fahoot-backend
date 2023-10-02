@@ -1,14 +1,15 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { User, UserDocument } from './schema/user.schema';
 import { ClientSession, Model } from 'mongoose';
 import { UpdateUserDTO } from './dto/update_user.dto';
 import { SecurityService } from './../security/security.service';
 import { InjectModel } from '@nestjs/mongoose';
 import { IInternalUser, IInternalUpdate } from './../../types/user.types';
-import { DEFAULT_DATABASE_CONNECTION, ErrorMessages } from './../../utils/constant';
+import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
 import { validateObjectId } from './../../utils/helper';
 import { TransactionManager } from '../shared/transaction.manager';
 import { QuizService } from '../quiz/quiz.service';
+import Result from 'src/wrapper/result';
 
 @Injectable()
 export class UserService {
@@ -33,66 +34,72 @@ export class UserService {
    * Create a new user. It checks if the user's email address is not already existing.
    * @param payload user payload
    * @param session mongodb session used for transaction
-   * @returns a promise that resolves with a user document
-   * @throws BadRequestException if user email already exist
-   * @throws InternalServerErrorException if an unknown error occurs
+   * @returns a promise that resolves with a Result object
    */
-  public async createUser(payload: IInternalUser, session?: ClientSession): Promise<UserDocument> {
+  public async createUser(payload: IInternalUser, session?: ClientSession): Promise<Result<UserDocument | null>> {
     try {
       const userExist = await this.userModel.findOne({ emailAddress: payload.emailAddress });
-      if (userExist) throw new BadRequestException(`User ${payload.emailAddress} already exist`);
+
+      if (userExist) return new Result<null>(false, null, `User ${payload.emailAddress} already exist`, HttpStatus.BAD_REQUEST);
+
       let hashedPassword = null;
+
+      let hashedPasswordData = null;
+
       if (payload.password) {
         hashedPassword = await this.securityService.hash(payload.password);
-      }
 
+        hashedPasswordData = hashedPassword.getData();
+
+        if (!hashedPasswordData) return new Result<null>(false, null, 'Unable to hash password', HttpStatus.BAD_REQUEST);
+      }
       /**
        * Using an array as the first argument in userModel.create() because when using transactions
        * MongoDB expects an array of documents. We extract the first element afterwards since we're only interested in a single user.
        */
-      const user = await this.userModel.create([{ ...payload, password: hashedPassword }], { session: session });
-      return user[0];
+      const user = await this.userModel.create([{ ...payload, password: hashedPasswordData }], { session: session });
+
+      return new Result<UserDocument>(true, user[0], null, HttpStatus.CREATED);
     } catch (error) {
-      if (error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   /**
    * Gets user with a specific id
    * @param userId user id
-   * @returns a promise that resolves with a user document
-   * @throws BadRequestException if user id is invalid
-   * @throws NotFoundException if user id is not found
-   * @throws InternalServerErrorException if an unknown error occurs
+   * @returns a promise that resolves with a Result object
    */
-  public async getUser(userId: string): Promise<UserDocument> {
+  public async getUser(userId: string): Promise<Result<UserDocument | null>> {
     try {
-      validateObjectId(userId);
+      const isValidObjectId = validateObjectId(userId);
+
+      if (!isValidObjectId.getData()) return new Result<null>(false, null, `Invalid objectId: ${userId}`, HttpStatus.BAD_REQUEST);
+
       const user = await this.userModel.findById(userId);
-      if (!user) throw new NotFoundException(`User ${userId} not found`);
-      return user;
+
+      if (!user) return new Result<null>(false, null, `User ${userId} not found`, HttpStatus.BAD_REQUEST);
+
+      return new Result<UserDocument>(true, user, null, HttpStatus.OK);
     } catch (error) {
-      if (error instanceof BadRequestException || error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   /**
    * Finds a user by email
    * @param emailAddress user email address
-   * @returns a promise that resolves with a user document
-   * @throws NotFoundException when user can't be found
-   * @throws InternalServerErrorException if an unknown error occurs
+   * @returns a promise that resolves with a Result object
    */
-  public async findByEmailAddress(emailAddress: string): Promise<UserDocument> {
+  public async findByEmailAddress(emailAddress: string): Promise<Result<UserDocument | null>> {
     try {
       const user = await this.userModel.findOne({ emailAddress });
-      if (!user) throw new BadRequestException(ErrorMessages.USER_NOT_FOUND);
-      return user;
+
+      if (!user) return new Result<null>(false, null, `User with ${emailAddress} not found`, HttpStatus.BAD_REQUEST);
+
+      return new Result<UserDocument>(true, user, null, HttpStatus.OK);
     } catch (error) {
-      if (error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -101,19 +108,21 @@ export class UserService {
    * @param payload update payload
    * @param userId user id
    * @param session mongodb session
-   * @returns a promise that resolves with a user document
-   * @throws BadRequestException if user id is invalid or update was not successful
-   * @throws InternalServerErrorException if an unknown error occurs
+   * @returns a promise that resolves with a Result object
    */
-  public async updateUser(payload: UpdateUserDTO, userId: string, session?: ClientSession): Promise<UserDocument> {
+  public async updateUser(payload: UpdateUserDTO, userId: string, session?: ClientSession): Promise<Result<UserDocument | null>> {
     try {
-      validateObjectId(userId);
+      const isValidObjectId = validateObjectId(userId);
+
+      if (!isValidObjectId.getData()) return new Result<null>(false, null, `Invalid objectId: ${userId}`, HttpStatus.BAD_REQUEST);
+
       const updatedUser = await this.userModel.findByIdAndUpdate(userId, payload, { new: true, session: session });
-      if (!updatedUser) throw new BadRequestException('Unable to update user');
-      return updatedUser;
+
+      if (!updatedUser) return new Result<null>(false, null, 'unable to update user', HttpStatus.BAD_REQUEST);
+
+      return new Result<UserDocument>(true, updatedUser, null, HttpStatus.OK);
     } catch (error) {
-      if (error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -122,18 +131,17 @@ export class UserService {
    * @param payload user payload
    * @param emailAddress email address
    * @param session mongodb session
-   * @returns a promise that resolves to void
-   * @throws BadRequestException if update was not successful
-   * @throws InternalServerErrorException if an unknown error occurs
+   * @returns a promise that resolves with a Result object
    */
-  public async updateSensitiveData(payload: IInternalUpdate, emailAddress: string, session?: ClientSession): Promise<void> {
+  public async updateSensitiveData(payload: IInternalUpdate, emailAddress: string, session?: ClientSession): Promise<Result<UserDocument | null>> {
     try {
       const updatedUser = await this.userModel.findOneAndUpdate({ emailAddress: emailAddress }, payload, { new: true, session: session });
-      if (!updatedUser) throw new BadRequestException('Unable to update user');
-      return;
+
+      if (!updatedUser) return new Result<null>(false, null, 'Unable to update sensitive data', HttpStatus.BAD_REQUEST);
+
+      return new Result<UserDocument>(true, null, null, HttpStatus.OK);
     } catch (error) {
-      if (error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -141,28 +149,39 @@ export class UserService {
    * Deletes a user and all related data using transactions. Takes an optional session parameter if this method will be used in a transaction
    * @param userId user id
    * @param ses mongodb session
-   * @throws BadRequestException if user id is not valid
-   * @throws InternalServerErrorException if an unknown error occurs
+   * @returns a promise that resolves with a Result object
    */
-  public async deleteUser(userId: string, ses?: ClientSession): Promise<void> {
-    let session = null;
+  public async deleteUser(userId: string): Promise<Result<UserDocument | null>> {
     try {
-      if (ses) {
-        session = ses;
-      } else {
-        session = await this.transactionManager.startSession();
+      const session = await this.transactionManager.startSession();
+
+      const isValidObjectId = validateObjectId(userId);
+
+      if (!isValidObjectId.getData()) {
+        await this.transactionManager.abortTransaction();
+        return new Result<null>(false, null, `Invalid objectId: ${userId}`, HttpStatus.BAD_REQUEST);
       }
 
-      validateObjectId(userId);
       await this.transactionManager.startTransaction();
-      await this.userModel.findByIdAndDelete(userId, { session: session });
-      await this.quizService.deleteAllQuizzes(userId, session);
+
+      const deletedUser = await this.userModel.findByIdAndDelete(userId, { session: session });
+      if (!deletedUser) {
+        await this.transactionManager.abortTransaction();
+        return new Result<null>(false, null, `Could not delete user`, HttpStatus.BAD_REQUEST);
+      }
+
+      const deleteQuizzes = await this.quizService.deleteAllQuizzes(userId, session);
+      if (!deleteQuizzes.isSuccess()) {
+        await this.transactionManager.abortTransaction();
+        return new Result<null>(false, null, `Could not delete user quizzes`, HttpStatus.BAD_REQUEST);
+      }
+
       await this.transactionManager.commitTransaction();
-      return;
+
+      return new Result<UserDocument>(true, deletedUser, null, HttpStatus.OK);
     } catch (error) {
       await this.transactionManager.abortTransaction();
-      if (!(error instanceof InternalServerErrorException)) throw error;
-      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     } finally {
       await this.transactionManager.endSession();
     }

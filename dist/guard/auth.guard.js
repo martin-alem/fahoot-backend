@@ -27,7 +27,7 @@ let AuthorizationGuard = exports.AuthorizationGuard = class AuthorizationGuard {
             return this.authService.getRole() == role;
         else if (this.authService.getRole() == role && this.authService.getStatus() == status)
             return true;
-        return false;
+        throw new common_1.UnauthorizedException('Unauthorized access');
     }
 };
 exports.AuthorizationGuard = AuthorizationGuard = __decorate([

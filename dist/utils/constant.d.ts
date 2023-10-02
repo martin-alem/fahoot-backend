@@ -18,6 +18,7 @@ export declare const ACCESS_TOKEN_COOKIE_NAME = "_access_token";
 export declare const REMEMBER_ME_COOKIE_NAME = "_remember_me_";
 export declare const SPACES_ROOT = "uploads";
 export declare const DEFAULT_DATABASE_CONNECTION = "fahoot_database_connection";
+export declare const MAX_FILE_SIZE = 11000000;
 export declare enum QuizStatus {
     PUBLISHED = "published",
     DRAFT = "draft"
@@ -134,5 +135,9 @@ export declare enum UPDATE_EMAIL_REQUEST {
 }
 export declare enum UPLOAD_REQUEST {
     LIMIT = 50,
+    TTL = 60
+}
+export declare enum LOG_REQUEST {
+    LIMIT = 500,
     TTL = 60
 }

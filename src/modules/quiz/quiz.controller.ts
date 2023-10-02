@@ -13,7 +13,7 @@ import { PaginationDTO } from './dto/pagination.dto';
 import { AuthService } from '../shared/auth.service';
 import { LoggerService } from '../logger/logger.service';
 import { LEVEL } from './../../types/log.types';
-import { log } from './../../utils/helper';
+import { handleResult, log } from './../../utils/helper';
 
 @Controller('quiz')
 export class QuizController {
@@ -36,7 +36,7 @@ export class QuizController {
     try {
       const userId = this.authService.getId();
       const quiz = await this.quizService.createQuiz(payload, userId);
-      return quiz;
+      return handleResult<Quiz>(quiz);
     } catch (error) {
       log(this.loggerService, 'create_quiz_error', error.message, request, LEVEL.CRITICAL);
       throw error;
@@ -51,7 +51,7 @@ export class QuizController {
   public async getQuiz(@Param('quizId') quizId: string, @Req() request: Request): Promise<Quiz> {
     try {
       const quiz = await this.quizService.getQuizById(quizId);
-      return quiz;
+      return handleResult<Quiz>(quiz);
     } catch (error) {
       log(this.loggerService, 'get_quiz_error', error.message, request, LEVEL.CRITICAL);
       throw error;
@@ -75,7 +75,7 @@ export class QuizController {
       const pagination: PaginationDTO = { page: page, query: query, pageSize: pageSize, sortOrder: sortOrder, sortField: sortField };
       const userId = this.authService.getId();
       const quizzes = await this.quizService.getQuizzes(userId, pagination);
-      return quizzes;
+      return handleResult<IPaginationResult<Quiz>>(quizzes);
     } catch (error) {
       log(this.loggerService, 'get_quizzes_error', error.message, request, LEVEL.CRITICAL);
       throw error;
@@ -91,7 +91,7 @@ export class QuizController {
     try {
       const userId = this.authService.getId();
       const updatedQuiz = await this.quizService.updateQuiz(quizId, userId, payload);
-      return updatedQuiz;
+      return handleResult<Quiz>(updatedQuiz);
     } catch (error) {
       log(this.loggerService, 'update_quiz_error', error.message, request, LEVEL.CRITICAL);
       throw error;
@@ -103,28 +103,13 @@ export class QuizController {
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
   @Delete(':quizId')
-  public async deleteQuiz(@Param('quizId') quizId: string, @Req() request: Request): Promise<void> {
+  public async deleteQuiz(@Param('quizId') quizId: string, @Req() request: Request): Promise<Quiz> {
     try {
       const userId = this.authService.getId();
-      return await this.quizService.deleteQuiz(quizId, userId);
+      const result = await this.quizService.deleteQuiz(quizId, userId);
+      return handleResult<Quiz>(result);
     } catch (error) {
       log(this.loggerService, 'delete_one_quiz_error', error.message, request, LEVEL.CRITICAL);
-      throw error;
-    }
-  }
-
-  @Throttle(DELETE_QUIZ_REQUEST.LIMIT, DELETE_QUIZ_REQUEST.TTL)
-  @Role(UserRole.USER)
-  @Active(Status.ACTIVE)
-  @UseGuards(AuthorizationGuard)
-  @Delete('/quizzes')
-  public async deleteAllQuizzes(@Query('quizId') quizId: string, @Req() request: Request): Promise<void> {
-    try {
-      const userId = this.authService.getId();
-      const ids: string[] = quizId.split(',');
-      return await this.quizService.deleteQuizzes(userId, ids);
-    } catch (error) {
-      log(this.loggerService, 'delete_many_quizzes_error', error.message, request, LEVEL.CRITICAL);
       throw error;
     }
   }

@@ -35,7 +35,7 @@ let QuizController = exports.QuizController = class QuizController {
         try {
             const userId = this.authService.getId();
             const quiz = await this.quizService.createQuiz(payload, userId);
-            return quiz;
+            return (0, helper_1.handleResult)(quiz);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'create_quiz_error', error.message, request, log_types_1.LEVEL.CRITICAL);
@@ -45,7 +45,7 @@ let QuizController = exports.QuizController = class QuizController {
     async getQuiz(quizId, request) {
         try {
             const quiz = await this.quizService.getQuizById(quizId);
-            return quiz;
+            return (0, helper_1.handleResult)(quiz);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'get_quiz_error', error.message, request, log_types_1.LEVEL.CRITICAL);
@@ -57,7 +57,7 @@ let QuizController = exports.QuizController = class QuizController {
             const pagination = { page: page, query: query, pageSize: pageSize, sortOrder: sortOrder, sortField: sortField };
             const userId = this.authService.getId();
             const quizzes = await this.quizService.getQuizzes(userId, pagination);
-            return quizzes;
+            return (0, helper_1.handleResult)(quizzes);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'get_quizzes_error', error.message, request, log_types_1.LEVEL.CRITICAL);
@@ -68,7 +68,7 @@ let QuizController = exports.QuizController = class QuizController {
         try {
             const userId = this.authService.getId();
             const updatedQuiz = await this.quizService.updateQuiz(quizId, userId, payload);
-            return updatedQuiz;
+            return (0, helper_1.handleResult)(updatedQuiz);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'update_quiz_error', error.message, request, log_types_1.LEVEL.CRITICAL);
@@ -78,21 +78,11 @@ let QuizController = exports.QuizController = class QuizController {
     async deleteQuiz(quizId, request) {
         try {
             const userId = this.authService.getId();
-            return await this.quizService.deleteQuiz(quizId, userId);
+            const result = await this.quizService.deleteQuiz(quizId, userId);
+            return (0, helper_1.handleResult)(result);
         }
         catch (error) {
             (0, helper_1.log)(this.loggerService, 'delete_one_quiz_error', error.message, request, log_types_1.LEVEL.CRITICAL);
-            throw error;
-        }
-    }
-    async deleteAllQuizzes(quizId, request) {
-        try {
-            const userId = this.authService.getId();
-            const ids = quizId.split(',');
-            return await this.quizService.deleteQuizzes(userId, ids);
-        }
-        catch (error) {
-            (0, helper_1.log)(this.loggerService, 'delete_many_quizzes_error', error.message, request, log_types_1.LEVEL.CRITICAL);
             throw error;
         }
     }
@@ -162,18 +152,6 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], QuizController.prototype, "deleteQuiz", null);
-__decorate([
-    (0, throttler_1.Throttle)(constant_1.DELETE_QUIZ_REQUEST.LIMIT, constant_1.DELETE_QUIZ_REQUEST.TTL),
-    (0, auth_decorator_1.Role)(user_types_1.UserRole.USER),
-    (0, auth_decorator_1.Active)(constant_1.Status.ACTIVE),
-    (0, common_1.UseGuards)(auth_guard_1.AuthorizationGuard),
-    (0, common_1.Delete)('/quizzes'),
-    __param(0, (0, common_1.Query)('quizId')),
-    __param(1, (0, common_1.Req)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", Promise)
-], QuizController.prototype, "deleteAllQuizzes", null);
 exports.QuizController = QuizController = __decorate([
     (0, common_1.Controller)('quiz'),
     __metadata("design:paramtypes", [quiz_service_1.QuizService, auth_service_1.AuthService, logger_service_1.LoggerService])

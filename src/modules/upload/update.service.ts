@@ -1,9 +1,10 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { HttpStatus, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { DeleteObjectCommand, PutObjectCommand, S3 } from '@aws-sdk/client-s3';
 import { IFileUpload } from './../../types/file.types';
 import { generateRandomToken } from './../../utils/helper';
 import { ConfigService } from '@nestjs/config';
-import { SPACES_ROOT, UploadDestination } from 'src/utils/constant';
+import { SPACES_ROOT, UploadDestination } from './../../utils/constant';
+import Result from './../../wrapper/result';
 
 @Injectable()
 export class UploadService {
@@ -23,7 +24,7 @@ export class UploadService {
     });
   }
 
-  async uploadFile(file: Express.Multer.File, destination: string): Promise<IFileUpload> {
+  async uploadFile(file: Express.Multer.File, destination: string): Promise<Result<IFileUpload | null>> {
     const filename = `${generateRandomToken()}.${file.originalname.split('.').pop()}`;
     let fullPath: string;
     switch (destination) {
@@ -48,16 +49,14 @@ export class UploadService {
       };
 
       await this.s3.send(new PutObjectCommand(params));
-      return {
-        filename: `https://${BUCKET}.${SPACES_ENDPOINT}/${fullPath}`,
-      };
+      const data: IFileUpload = { filename: `https://${BUCKET}.${SPACES_ENDPOINT}/${fullPath}` };
+      return new Result<IFileUpload>(true, data, null, HttpStatus.OK);
     } catch (error) {
-      if (!(error instanceof InternalServerErrorException)) throw error;
-      throw new InternalServerErrorException(error.message);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  async deleteFile(key: string): Promise<void> {
+  async deleteFile(key: string): Promise<Result<boolean | null>> {
     try {
       const BUCKET = this.configService.get<string>('SPACES_BUCKET');
       const params = {
@@ -66,10 +65,10 @@ export class UploadService {
       };
 
       await this.s3.send(new DeleteObjectCommand(params));
-      return;
+      return new Result<boolean>(true, true, null, HttpStatus.OK);
     } catch (error) {
       if (!(error instanceof InternalServerErrorException)) throw error;
-      throw new InternalServerErrorException(error.message);
+      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

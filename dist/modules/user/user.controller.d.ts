@@ -11,5 +11,5 @@ export declare class UserController {
     constructor(userService: UserService, authService: AuthService, loggerService: LoggerService);
     getUser(request: Request): Promise<UserDocument>;
     updateUser(payload: UpdateUserDTO, request: Request): Promise<UserDocument>;
-    deleteUser(request: Request): Promise<void>;
+    deleteUser(request: Request): Promise<UserDocument>;
 }
