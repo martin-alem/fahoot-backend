@@ -150,10 +150,10 @@ export class SecurityService {
       if (!newToken) return new Result<null>(false, null, 'Unable to update token', HttpStatus.BAD_REQUEST);
 
       if (emailPurpose === EmailPurpose.EMAIL_VERIFICATION) {
-        const link = `${this.configService.get<string>('VERIFY_EMAIL_URL')}?token=${token}`;
+        const link = `${this.configService.get<string>('VERIFY_EMAIL_URL')}?token=${tokenData}`;
         message = createEmailVerificationTemplate(link);
       } else if (emailPurpose === EmailPurpose.PASSWORD_RESET) {
-        const link = `${this.configService.get<string>('PASSWORD_RESET_URL')}?token=${token}`;
+        const link = `${this.configService.get<string>('PASSWORD_RESET_URL')}?token=${tokenData}`;
         message = createPasswordResetTemplate(link);
       }
       const payload = {
