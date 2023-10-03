@@ -268,7 +268,16 @@ export class SecurityService {
 
       const checkNewEmail = await this.userService.findByEmailAddress(newEmailAddress);
       const checkNewEmailData = checkNewEmail.getData();
-      if (!checkNewEmailData) return new Result<null>(false, null, 'Email address already exists', HttpStatus.BAD_REQUEST);
+      if (checkNewEmailData) return new Result<null>(false, null, 'Email address already exists', HttpStatus.BAD_REQUEST);
+
+      await this.queueVerificationEmail(newEmailAddress, 'Verify Email', EmailPurpose.EMAIL_VERIFICATION);
+
+      const updateResult = await this.userService.updateSensitiveData(
+        { emailAddress: newEmailAddress, verified: false, status: Status.INACTIVE },
+        userData.emailAddress,
+      );
+      const updateResultData = updateResult.getData();
+      if (!updateResultData) return new Result<null>(false, null, 'Unable to update user email address', HttpStatus.BAD_REQUEST);
 
       return new Result<UserDocument>(true, userData, null, HttpStatus.OK);
     } catch (error) {

@@ -95,7 +95,7 @@ export class UserService {
     try {
       const user = await this.userModel.findOne({ emailAddress });
 
-      if (!user) return new Result<null>(false, null, `User with ${emailAddress} not found`, HttpStatus.BAD_REQUEST);
+      if (!user) return new Result<null>(false, null, null, HttpStatus.OK);
 
       return new Result<UserDocument>(true, user, null, HttpStatus.OK);
     } catch (error) {
