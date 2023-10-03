@@ -139,7 +139,7 @@ export class UserService {
 
       if (!updatedUser) return new Result<null>(false, null, 'Unable to update sensitive data', HttpStatus.BAD_REQUEST);
 
-      return new Result<UserDocument>(true, null, null, HttpStatus.OK);
+      return new Result<UserDocument>(true, updatedUser, null, HttpStatus.OK);
     } catch (error) {
       return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
