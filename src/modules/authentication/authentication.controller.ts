@@ -149,7 +149,7 @@ export class AuthenticationController {
         response.status(204);
         return null;
       }
-      const decodedPayload = await this.securityService.validateToken(tokenCookie);
+      const decodedPayload = await this.securityService.validateToken<IAuthUser>(tokenCookie);
 
       if (!decodedPayload.isSuccess()) throw new BadRequestException('Unable to decode payload');
 

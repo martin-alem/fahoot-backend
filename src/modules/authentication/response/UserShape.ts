@@ -6,4 +6,5 @@ export const UserShape = {
   avatarUrl: true,
   verified: true,
   status: true,
+  role: true,
 };

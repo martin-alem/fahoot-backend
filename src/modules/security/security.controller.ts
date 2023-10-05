@@ -55,7 +55,7 @@ export class SecurityController {
   }
 
   @Throttle(UPDATE_PASSWORD_REQUEST.LIMIT, UPDATE_PASSWORD_REQUEST.TTL)
-  @Role(UserRole.USER)
+  @Role(UserRole.CREATOR)
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
   @UseInterceptors(new ResponseInterceptor(UserShape))
@@ -78,7 +78,7 @@ export class SecurityController {
   }
 
   @Throttle(UPDATE_EMAIL_REQUEST.LIMIT, UPDATE_EMAIL_REQUEST.TTL)
-  @Role(UserRole.USER)
+  @Role(UserRole.CREATOR)
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
   @Post('/update_email')

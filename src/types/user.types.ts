@@ -1,7 +1,8 @@
 import { AuthenticationMethod, Status } from '../utils/constant';
 
 export enum UserRole {
-  USER = 'user',
+  CREATOR = 'creator',
+  PLAYER = 'player',
   ADMIN = 'admin',
 }
 
@@ -9,6 +10,11 @@ export interface IAuthUser {
   id: string;
   emailAddress: string;
   role: UserRole;
+}
+
+export interface ISocketAuth {
+  id: string;
+  room: string;
 }
 
 export interface IInternalUser {

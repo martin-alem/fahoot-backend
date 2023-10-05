@@ -28,7 +28,7 @@ export class QuizController {
   }
 
   @Throttle(CREATE_QUIZ_REQUEST.LIMIT, CREATE_QUIZ_REQUEST.TTL)
-  @Role(UserRole.USER)
+  @Role(UserRole.CREATOR)
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
   @Post()
@@ -44,7 +44,7 @@ export class QuizController {
   }
 
   @Throttle(GET_QUIZ_REQUEST.LIMIT, GET_QUIZ_REQUEST.TTL)
-  @Role(UserRole.USER)
+  @Role(UserRole.CREATOR)
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
   @Get(':quizId')
@@ -59,7 +59,7 @@ export class QuizController {
   }
 
   @Throttle(GET_QUIZZES_REQUEST.LIMIT, GET_QUIZZES_REQUEST.TTL)
-  @Role(UserRole.USER)
+  @Role(UserRole.CREATOR)
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
   @Get()
@@ -83,7 +83,7 @@ export class QuizController {
   }
 
   @Throttle(UPDATE_QUIZ_REQUEST.LIMIT, UPDATE_QUIZ_REQUEST.TTL)
-  @Role(UserRole.USER)
+  @Role(UserRole.CREATOR)
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
   @Put(':quizId')
@@ -99,7 +99,7 @@ export class QuizController {
   }
 
   @Throttle(DELETE_QUIZ_REQUEST.LIMIT, DELETE_QUIZ_REQUEST.TTL)
-  @Role(UserRole.USER)
+  @Role(UserRole.CREATOR)
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
   @Delete(':quizId')

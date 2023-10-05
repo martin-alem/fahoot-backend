@@ -14,11 +14,18 @@ export enum ErrorMessages {
   TOKEN_EMAIL_MISMATCH = 'The email address on the decoded token was not the same as the one in the database',
 }
 
+export enum Events {
+  ERROR = 'fahoot:error', // emitted when an error is encountered
+  CONNECTED = 'fahoot:connected', // emitted when a user successfully connects
+  DISCONNECT = 'fahoot:disconnected', // emitted when a user disconnects
+}
+
 export const MAX_QUESTION_PER_QUIZ = 500;
 export const ACCESS_TOKEN_COOKIE_NAME = '_access_token';
 export const REMEMBER_ME_COOKIE_NAME = '_remember_me_';
 export const SPACES_ROOT = 'uploads';
 export const DEFAULT_DATABASE_CONNECTION = 'fahoot_database_connection';
+export const PLAY_NAMESPACE = 'fahoot_play';
 export const MAX_FILE_SIZE = 1.1e7;
 
 export enum QuizStatus {

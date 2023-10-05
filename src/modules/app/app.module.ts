@@ -6,7 +6,7 @@ import { AuthenticationModule } from '../authentication/authentication.module';
 import { SecurityModule } from '../security/security.module';
 import { NotificationModule } from '../notification/notification.module';
 import { QuizModule } from '../quiz/quiz.module';
-import { ParticipationModule } from '../participation/participation.module';
+import { PlayModule } from '../play/play.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { LoggerModule } from '../logger/logger.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -29,7 +29,7 @@ import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
     SecurityModule,
     NotificationModule,
     QuizModule,
-    ParticipationModule,
+    PlayModule,
     AnalyticsModule,
     LoggerModule,
     RabbitMQModule,
@@ -49,6 +49,7 @@ import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
         JWT_TOKEN_AUDIENCE: Joi.string().required(),
         JWT_TOKEN_ISSUER: Joi.string().required(),
         RABBITMQ_URI: Joi.string().required(),
+        REDIS_URI: Joi.string().required(),
         GMAIL_EMAIL: Joi.string().required(),
         GMAIL_PASSWORD: Joi.string().required(),
         CLIENT_API_KEY: Joi.string().required(),

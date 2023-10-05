@@ -70,15 +70,15 @@ export class SecurityService {
    * @param token token to validate
    * @returns a promise that resolves with a Result object
    */
-  async validateToken(token: string): Promise<Result<IAuthUser | null>> {
+  async validateToken<T extends object>(token: string): Promise<Result<T | null>> {
     try {
-      const decodedToken = this.jwtService.verify<IAuthUser>(token, {
+      const decodedToken = this.jwtService.verify<T>(token, {
         audience: this.configService.get<string>('JWT_TOKEN_AUDIENCE'),
         issuer: this.configService.get<string>('JWT_TOKEN_ISSUER'),
         secret: this.configService.get<string>('JWT_SECRET'),
       });
 
-      return new Result<IAuthUser>(true, decodedToken, null, HttpStatus.OK);
+      return new Result<T>(true, decodedToken, null, HttpStatus.OK);
     } catch (error) {
       if (!(error instanceof InternalServerErrorException)) throw error;
       return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -142,7 +142,7 @@ export class SecurityService {
   public async queueVerificationEmail(emailAddress: string, subject: string, emailPurpose: EmailPurpose): Promise<Result<boolean | null>> {
     try {
       let message = '';
-      const token = await this.generateTokens({ id: '', emailAddress: emailAddress, role: UserRole.USER }, JWT_TTL.ACCESS_TOKEN_TTL);
+      const token = await this.generateTokens({ id: '', emailAddress: emailAddress, role: UserRole.CREATOR }, JWT_TTL.ACCESS_TOKEN_TTL);
       const tokenData = token.getData();
       if (!tokenData) return new Result<null>(false, null, 'Could not generate token', HttpStatus.BAD_REQUEST);
 
@@ -182,7 +182,7 @@ export class SecurityService {
       const tokenExist = await this.tokenModel.findOne({ token: token });
       if (!tokenExist) return new Result<null>(false, null, 'Token does not exist', HttpStatus.BAD_REQUEST);
 
-      const decodedToken = await this.validateToken(token);
+      const decodedToken = await this.validateToken<IAuthUser>(token);
       const decodedTokenData = decodedToken.getData();
       if (!decodedTokenData) return new Result<null>(false, null, 'Error validating token', HttpStatus.BAD_REQUEST);
 

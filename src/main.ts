@@ -5,6 +5,7 @@ import * as cookieParser from 'cookie-parser';
 import { AppModule } from './modules/app/app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AllExceptionsFilter } from './exception/global.exception';
+import { RedisIoAdapter } from './modules/redis/redis.adapter';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
@@ -31,6 +32,11 @@ async function bootstrap(): Promise<void> {
       disableErrorMessages: process.env.NODE_ENV === 'production' ? true : false,
     }),
   );
+
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connectToRedis();
+
+  app.useWebSocketAdapter(redisIoAdapter);
 
   const config = new DocumentBuilder().setTitle('Fahoot API').setDescription('Fahoot API documentation').setVersion('1.0').addTag('Fahoot').build();
   const document = SwaggerModule.createDocument(app, config);

@@ -28,7 +28,7 @@ export class UserController {
   }
 
   @Throttle(GET_USER_REQUEST.LIMIT, GET_USER_REQUEST.TTL)
-  @Role(UserRole.USER)
+  @Role(UserRole.CREATOR)
   @UseGuards(AuthorizationGuard)
   @UseInterceptors(new ResponseInterceptor(UserShape))
   @Get()
@@ -46,7 +46,7 @@ export class UserController {
   }
 
   @Throttle(UPDATE_USER_REQUEST.LIMIT, UPDATE_USER_REQUEST.TTL)
-  @Role(UserRole.USER)
+  @Role(UserRole.CREATOR)
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
   @UseInterceptors(new ResponseInterceptor(UserShape))
@@ -65,7 +65,7 @@ export class UserController {
   }
 
   @Throttle(DELETE_USER_REQUEST.LIMIT, DELETE_USER_REQUEST.TTL)
-  @Role(UserRole.USER)
+  @Role(UserRole.CREATOR)
   @UseGuards(AuthorizationGuard)
   @UseInterceptors(new ResponseInterceptor(UserShape))
   @Delete()

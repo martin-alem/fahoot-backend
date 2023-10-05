@@ -29,7 +29,7 @@ export class User {
   @Prop({ type: String, required: false, enum: Status, default: Status.INACTIVE })
   status: Status;
 
-  @Prop({ type: String, required: false, enum: UserRole, default: UserRole.USER })
+  @Prop({ type: String, required: false, enum: UserRole, default: UserRole.CREATOR })
   role: UserRole;
 }
 

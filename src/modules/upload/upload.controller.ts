@@ -38,7 +38,7 @@ export class UploadController {
 
   @Throttle(UPLOAD_REQUEST.LIMIT, UPLOAD_REQUEST.TTL)
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 1e7 } }))
-  @Role(UserRole.USER)
+  @Role(UserRole.CREATOR)
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
   @Post()
@@ -63,7 +63,7 @@ export class UploadController {
   }
 
   @Throttle(UPLOAD_REQUEST.LIMIT, UPLOAD_REQUEST.TTL)
-  @Role(UserRole.USER)
+  @Role(UserRole.CREATOR)
   @Active(Status.ACTIVE)
   @UseGuards(AuthorizationGuard)
   @Delete()

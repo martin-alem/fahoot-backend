@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import { SecurityService } from './../modules/security/security.service';
 import { AuthService } from './../modules/shared/auth.service';
 import { UserService } from './../modules/user/user.service';
+import { IAuthUser } from 'src/types/user.types';
 
 @Injectable()
 export class AuthenticationMiddleware implements NestMiddleware {
@@ -23,7 +24,7 @@ export class AuthenticationMiddleware implements NestMiddleware {
         throw new UnauthorizedException('Access token not found');
       }
 
-      const decodedPayload = await this.securityService.validateToken(tokenCookie);
+      const decodedPayload = await this.securityService.validateToken<IAuthUser>(tokenCookie);
       const decodedPayloadData = decodedPayload.getData();
       if (!decodedPayloadData) throw new BadRequestException('Unable to decode token');
 

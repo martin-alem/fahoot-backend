@@ -13,9 +13,8 @@ export class RabbitMQService implements OnModuleDestroy {
   }
 
   async connect(): Promise<void> {
-    this.connection = await connect(this.configService.get<string>('RABBITMQ_URI') ?? 'amqp://localhost');
+    this.connection = await connect(this.configService.get<string>('RABBITMQ_URI', 'amqp://localhost:5672'));
     this.channel = await this.connection.createChannel();
-    console.log('RabbitMQ connected.'); // Debugging statement
   }
 
   getChannel(): Channel {
