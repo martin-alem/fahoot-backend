@@ -58,7 +58,7 @@ export class NotificationService implements OnModuleInit {
       if (error) {
         log(this.loggerService, 'send_email_error', error.message);
       } else {
-        log(this.loggerService, 'send_email_success', info.messageId, undefined, LEVEL.INFO);
+        log(this.loggerService, 'send_email_success', info.messageId, LEVEL.INFO);
       }
     });
   }

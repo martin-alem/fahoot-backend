@@ -4,7 +4,7 @@ import { UserRole } from '../../../types/user.types';
 import { AuthenticationMethod, CollectName, Status } from '../../../utils/constant';
 
 @Schema({ autoCreate: true, collection: CollectName.USER, timestamps: true })
-export class User {
+export class User extends Document {
   @Prop({ type: String, required: true, lowercase: true })
   firstName: string;
 
@@ -33,5 +33,11 @@ export class User {
   role: UserRole;
 }
 
-export type UserDocument = User & Document;
 export const UserSchema = SchemaFactory.createForClass(User);
+
+UserSchema.pre('deleteOne', { document: true, query: false }, async function (next) {
+  const session = this.$session();
+  await this.$model('Quiz').deleteMany({ user: this._id }, { session: session });
+  await this.$model('Token').deleteMany({ emailAddress: this.emailAddress }, { session: session });
+  next();
+});

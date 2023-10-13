@@ -1,4 +1,4 @@
-import { HttpStatus, Inject, Injectable, InternalServerErrorException, forwardRef } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -8,12 +8,13 @@ import { Token } from './schema/tokens.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { UserService } from './../user/user.service';
 import { IAuthUser, UserRole } from './../../types/user.types';
-import { DEFAULT_DATABASE_CONNECTION, EmailPurpose, JWT_TTL, Status } from './../../utils/constant';
+import { DEFAULT_DATABASE_CONNECTION, EmailPurpose, ErrorMessages, JWT_TTL, Status } from './../../utils/constant';
 import { NotificationType } from './../../types/notification.type';
 import { createEmailVerificationTemplate, createPasswordResetTemplate } from '../../utils/email_templates';
-import { validateObjectId } from './../../utils/helper';
+import { log, validateObjectId } from './../../utils/helper';
 import Result from 'src/wrapper/result';
-import { UserDocument } from '../user/schema/user.schema';
+import { LoggerService } from '../logger/logger.service';
+import { User } from '../user/schema/user.schema';
 
 @Injectable()
 export class SecurityService {
@@ -22,6 +23,7 @@ export class SecurityService {
   private readonly notificationService: NotificationService;
   private readonly tokenModel: Model<Token>;
   private readonly userService: UserService;
+  private readonly loggerService: LoggerService;
 
   constructor(
     jwtService: JwtService,
@@ -29,12 +31,14 @@ export class SecurityService {
     @Inject(forwardRef(() => UserService)) userService: UserService,
     notificationService: NotificationService,
     @InjectModel(Token.name, DEFAULT_DATABASE_CONNECTION) tokenModel: Model<Token>,
+    loggerService: LoggerService,
   ) {
     this.jwtService = jwtService;
     this.configService = configService;
     this.userService = userService;
     this.notificationService = notificationService;
     this.tokenModel = tokenModel;
+    this.loggerService = loggerService;
   }
 
   /**
@@ -43,14 +47,10 @@ export class SecurityService {
    * @param ttl token time to live in milliseconds
    * @returns a promise that resolves with a Result object
    */
-  public async signToken(user: IAuthUser, ttl: number): Promise<Result<string | null>> {
+  public async signToken<T extends object>(entity: T, ttl: number): Promise<Result<string | null>> {
     try {
       const token = await this.jwtService.signAsync(
-        {
-          id: user.id,
-          emailAddress: user.emailAddress,
-          role: user.role,
-        },
+        { ...entity },
         {
           audience: this.configService.get<string>('JWT_TOKEN_AUDIENCE'),
           issuer: this.configService.get<string>('JWT_TOKEN_ISSUER'),
@@ -61,7 +61,8 @@ export class SecurityService {
 
       return new Result<string>(true, token, null, HttpStatus.OK);
     } catch (error) {
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'sign_token_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -80,8 +81,8 @@ export class SecurityService {
 
       return new Result<T>(true, decodedToken, null, HttpStatus.OK);
     } catch (error) {
-      if (!(error instanceof InternalServerErrorException)) throw error;
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'validate_token_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -96,7 +97,8 @@ export class SecurityService {
       const hash = await bcrypt.hash(data, salt);
       return new Result<string>(true, hash.toString(), null, HttpStatus.OK);
     } catch (error) {
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'hash_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -111,24 +113,26 @@ export class SecurityService {
       const isMatch = await bcrypt.compare(incomingData, hashedData);
       return new Result<boolean>(true, isMatch, null, HttpStatus.OK);
     } catch (error) {
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'compare_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   /**
-   *Generates a token for the specified user
-   * @param user user
+   *Generates a token for the specified entity
+   * @param entity the entity
    * @returns a promise that resolves with a Result object
    */
-  public async generateTokens(user: IAuthUser, tokenTTL: number): Promise<Result<string | null>> {
+  public async generateTokens<T extends object>(entity: T, tokenTTL: number): Promise<Result<string | null>> {
     try {
-      const token = await this.signToken(user, tokenTTL);
+      const token = await this.signToken<T>(entity, tokenTTL);
       const data = token.getData();
       if (!data) return new Result<null>(false, null, 'Unable to sign token', HttpStatus.BAD_REQUEST);
 
       return new Result<string>(true, data, null, HttpStatus.OK);
     } catch (error) {
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'generate_token_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -142,7 +146,7 @@ export class SecurityService {
   public async queueVerificationEmail(emailAddress: string, subject: string, emailPurpose: EmailPurpose): Promise<Result<boolean | null>> {
     try {
       let message = '';
-      const token = await this.generateTokens({ id: '', emailAddress: emailAddress, role: UserRole.CREATOR }, JWT_TTL.ACCESS_TOKEN_TTL);
+      const token = await this.generateTokens<IAuthUser>({ id: '', emailAddress: emailAddress, role: UserRole.CREATOR }, JWT_TTL.ACCESS_TOKEN_TTL);
       const tokenData = token.getData();
       if (!tokenData) return new Result<null>(false, null, 'Could not generate token', HttpStatus.BAD_REQUEST);
 
@@ -168,7 +172,8 @@ export class SecurityService {
       this.notificationService.enqueueNotification(JSON.stringify(notification));
       return new Result<boolean>(true, true, null, HttpStatus.OK);
     } catch (error) {
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'enqueue_email_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -177,22 +182,26 @@ export class SecurityService {
    * @param token incoming token
    * @returns a promise that resolves with a Result object
    */
-  private async verifyToken(token: string): Promise<Result<IAuthUser | null>> {
+  private async verifyToken<T extends object>(token: string): Promise<Result<T | null>> {
     try {
       const tokenExist = await this.tokenModel.findOne({ token: token });
       if (!tokenExist) return new Result<null>(false, null, 'Token does not exist', HttpStatus.BAD_REQUEST);
 
-      const decodedToken = await this.validateToken<IAuthUser>(token);
+      const decodedToken = await this.validateToken<T>(token);
       const decodedTokenData = decodedToken.getData();
       if (!decodedTokenData) return new Result<null>(false, null, 'Error validating token', HttpStatus.BAD_REQUEST);
 
-      if (decodedTokenData.emailAddress !== tokenExist.emailAddress) return new Result<null>(false, null, 'Token mismatch', HttpStatus.BAD_REQUEST);
-      const deletedToken = await this.tokenModel.findOneAndDelete({ token });
-      if (!deletedToken) return new Result<null>(false, null, 'Token could not be deleted', HttpStatus.BAD_REQUEST);
+      if ('emailAddress' in decodedTokenData) {
+        if (decodedTokenData.emailAddress !== tokenExist.emailAddress) return new Result<null>(false, null, 'Token mismatch', HttpStatus.BAD_REQUEST);
+        const deletedToken = await this.tokenModel.findOneAndDelete({ token });
+        if (!deletedToken) return new Result<null>(false, null, 'Token could not be deleted', HttpStatus.BAD_REQUEST);
 
-      return new Result<IAuthUser>(true, decodedToken.getData(), null, HttpStatus.OK);
+        return new Result<T>(true, decodedToken.getData(), null, HttpStatus.OK);
+      }
+      return new Result<null>(false, null, 'Token could not be decoded', HttpStatus.BAD_REQUEST);
     } catch (error) {
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'verify_token_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -201,19 +210,21 @@ export class SecurityService {
    * @param token incoming token
    * @returns a promise that resolves with a Result object
    */
-  public async verifyEmail(token: string): Promise<Result<UserDocument | null>> {
+  public async verifyEmail(token: string): Promise<Result<User | null>> {
     try {
-      const decodedToken = await this.verifyToken(token);
+      const decodedToken = await this.verifyToken<IAuthUser>(token);
       const decodedTokenData = decodedToken.getData();
+
       if (!decodedTokenData) return new Result(false, null, 'Token could not be verified', HttpStatus.BAD_REQUEST);
 
       const updateResult = await this.userService.updateSensitiveData({ verified: true, status: Status.ACTIVE }, decodedTokenData.emailAddress);
       const updatedResultData = updateResult.getData();
       if (!updatedResultData) return new Result(false, null, 'Unable to update sensitive data', HttpStatus.BAD_REQUEST);
 
-      return new Result<UserDocument>(true, updatedResultData, null, HttpStatus.OK);
+      return new Result<User>(true, updatedResultData, null, HttpStatus.OK);
     } catch (error) {
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'verify_email_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -224,7 +235,7 @@ export class SecurityService {
    * @param userId user id
    * @returns a promise that resolves with a Result object
    */
-  public async updatePassword(oldPassword: string, newPassword: string, userId: string): Promise<Result<UserDocument | null>> {
+  public async updatePassword(oldPassword: string, newPassword: string, userId: string): Promise<Result<User | null>> {
     try {
       const isValidObjectId = validateObjectId(userId);
       if (!isValidObjectId.getData()) return new Result<null>(false, null, `Invalid objectId: ${userId}`, HttpStatus.BAD_REQUEST);
@@ -235,7 +246,7 @@ export class SecurityService {
 
       const validPassword = await this.compare(oldPassword, userData.password);
       const validPasswordData = validPassword.getData();
-      if (!validPasswordData) return new Result<null>(false, null, 'Password does not match', HttpStatus.BAD_REQUEST);
+      if (!validPasswordData) return new Result<null>(false, null, 'We could not find the old password you provided', HttpStatus.BAD_REQUEST);
 
       const hashedPassword = await this.hash(newPassword);
       const hashedPasswordData = hashedPassword.getData();
@@ -245,9 +256,10 @@ export class SecurityService {
       const updateResultData = updateResult.getData();
       if (!updateResultData) return new Result<null>(false, null, 'Unable to update user password', HttpStatus.BAD_REQUEST);
 
-      return new Result<UserDocument>(true, userData, null, HttpStatus.OK);
+      return new Result<User>(true, userData, null, HttpStatus.OK);
     } catch (error) {
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'update_password_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -257,7 +269,7 @@ export class SecurityService {
    * @param userId user id
    * @returns a promise that resolves with a Result object
    */
-  public async updateEmail(newEmailAddress: string, userId: string): Promise<Result<UserDocument | null>> {
+  public async updateEmail(newEmailAddress: string, userId: string): Promise<Result<User | null>> {
     try {
       const isValidObjectId = validateObjectId(userId);
       if (!isValidObjectId.getData()) return new Result<null>(false, null, `Invalid objectId: ${userId}`, HttpStatus.BAD_REQUEST);
@@ -279,9 +291,10 @@ export class SecurityService {
       const updateResultData = updateResult.getData();
       if (!updateResultData) return new Result<null>(false, null, 'Unable to update user email address', HttpStatus.BAD_REQUEST);
 
-      return new Result<UserDocument>(true, userData, null, HttpStatus.OK);
+      return new Result<User>(true, userData, null, HttpStatus.OK);
     } catch (error) {
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'update_email_password_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -301,7 +314,8 @@ export class SecurityService {
 
       return new Result<boolean>(true, true, null, HttpStatus.OK);
     } catch (error) {
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'password_reset_request_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -312,7 +326,7 @@ export class SecurityService {
    */
   public async passwordReset(token: string, password: string): Promise<Result<boolean | null>> {
     try {
-      const decodedToken = await this.verifyToken(token);
+      const decodedToken = await this.verifyToken<IAuthUser>(token);
       const decodedTokenData = decodedToken.getData();
       if (!decodedTokenData) return new Result<null>(false, null, 'Unable to verify token', HttpStatus.BAD_REQUEST);
 
@@ -326,7 +340,8 @@ export class SecurityService {
 
       return new Result<boolean>(true, true, null, HttpStatus.OK);
     } catch (error) {
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'password_reset_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

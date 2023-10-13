@@ -1,14 +1,13 @@
-import { MiddlewareConsumer, Module, NestModule, RequestMethod, forwardRef } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, forwardRef } from '@nestjs/common';
 import { SecurityService } from './security.service';
 import { SecurityController } from './security.controller';
 import { Token, TokenSchema } from './schema/tokens.schema';
 import { MongooseModule } from '@nestjs/mongoose';
-import { UserModule } from './../user/user.module';
 import { JwtModule } from '@nestjs/jwt';
-import { SharedModule } from './../shared/shared.module';
 import { APIKeyMiddleware } from './../../middleware/apikey.middleware';
-import { AuthenticationMiddleware } from './../../middleware/auth.middleware';
 import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
+import { UserModule } from '../user/user.module';
+import { AccessTokenMiddleware } from 'src/middleware/access_token.middleware';
 
 @Module({
   imports: [
@@ -17,7 +16,6 @@ import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
       secret: process.env.JWT_SECRET,
     }),
     forwardRef(() => UserModule),
-    SharedModule,
   ],
   providers: [SecurityService],
   controllers: [SecurityController],
@@ -25,9 +23,6 @@ import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
 })
 export class SecurityModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(APIKeyMiddleware).forRoutes(SecurityController);
-    consumer
-      .apply(AuthenticationMiddleware)
-      .forRoutes({ path: 'security/update_password', method: RequestMethod.POST }, { path: 'security/update_email', method: RequestMethod.POST });
+    consumer.apply(APIKeyMiddleware, AccessTokenMiddleware).forRoutes(SecurityController);
   }
 }

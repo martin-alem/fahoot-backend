@@ -8,8 +8,10 @@ import { AuthenticationMethod, EmailPurpose, ErrorMessages, Status } from './../
 import { OAuth2Client } from 'google-auth-library';
 import { ConfigService } from '@nestjs/config';
 import { SignInDTO } from './dto/signin.dto';
-import { UserDocument } from '../user/schema/user.schema';
+import { User } from '../user/schema/user.schema';
 import Result from 'src/wrapper/result';
+import { LoggerService } from '../logger/logger.service';
+import { log } from 'src/utils/helper';
 const Client = new OAuth2Client();
 
 /**
@@ -19,17 +21,19 @@ const Client = new OAuth2Client();
  */
 @Injectable()
 export class AuthenticationService {
+  private readonly loggerService: LoggerService;
   private readonly userService: UserService;
   private readonly securityService: SecurityService;
   private readonly configService: ConfigService;
 
-  constructor(userService: UserService, securityService: SecurityService, configService: ConfigService) {
+  constructor(userService: UserService, securityService: SecurityService, configService: ConfigService, loggerService: LoggerService) {
     this.userService = userService;
     this.securityService = securityService;
     this.configService = configService;
+    this.loggerService = loggerService;
   }
 
-  public async signUp(payload: SignUpDTO): Promise<Result<UserDocument | null>> {
+  public async signUp(payload: SignUpDTO): Promise<Result<User | null>> {
     try {
       const user = await this.userService.createUser({ ...payload, verified: false, status: Status.INACTIVE });
       const userData = user.getData();
@@ -39,13 +43,14 @@ export class AuthenticationService {
 
       if (!result.isSuccess) return new Result<null>(false, null, 'Could not enqueue verification email', HttpStatus.BAD_REQUEST);
 
-      return new Result<UserDocument>(true, userData, null, HttpStatus.OK);
+      return new Result<User>(true, userData, null, HttpStatus.OK);
     } catch (error) {
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'manual_signup_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  public async googleSignUp(payload: string): Promise<Result<UserDocument | null>> {
+  public async googleSignUp(payload: string): Promise<Result<User | null>> {
     try {
       const googleUser = await this.googleOAuthVerification(payload);
       const googleUserData = googleUser.getData();
@@ -55,50 +60,62 @@ export class AuthenticationService {
       const userData = user.getData();
       if (!userData) return new Result<null>(false, null, 'Could not create user using google account', HttpStatus.BAD_REQUEST);
 
-      return new Result<UserDocument>(true, userData, null, HttpStatus.OK);
+      return new Result<User>(true, userData, null, HttpStatus.OK);
     } catch (error) {
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'google_signup_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  public async signIn(payload: SignInDTO): Promise<Result<UserDocument | null>> {
+  public async signIn(payload: SignInDTO): Promise<Result<User | null>> {
     try {
       const { emailAddress, password } = payload;
       const user = await this.userService.findByEmailAddress(emailAddress);
       const userData = user.getData();
-      if (!userData) return new Result<null>(false, null, 'Could not find email address', HttpStatus.BAD_REQUEST);
+      if (!userData) return new Result<null>(false, null, 'Invalid email or password combination', HttpStatus.BAD_REQUEST);
 
       const passwordMatched = await this.securityService.compare(password, userData.password);
-      if (!passwordMatched.getData()) return new Result<null>(false, null, 'Invalid password', HttpStatus.BAD_REQUEST);
+      if (!passwordMatched.getData()) return new Result<null>(false, null, 'Invalid email or password combination', HttpStatus.BAD_REQUEST);
 
-      return new Result<UserDocument>(true, userData, null, HttpStatus.OK);
+      return new Result<User>(true, userData, null, HttpStatus.OK);
     } catch (error) {
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'manual_signin_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  public async googleSignIn(payload: string): Promise<Result<UserDocument | null>> {
+  public async googleSignIn(payload: string): Promise<Result<User | null>> {
     try {
       const googleUser = await this.googleOAuthVerification(payload);
       const googleUserData = googleUser.getData();
-      if (!googleUserData) return new Result<null>(false, null, 'Could not get user data from google', HttpStatus.BAD_REQUEST);
+      if (!googleUserData) return new Result<null>(false, null, 'Could not signin with google', HttpStatus.BAD_REQUEST);
 
       const user = await this.userService.findByEmailAddress(googleUserData.emailAddress);
-      const userData = user.getData();
-      if (!userData) return new Result<null>(false, null, 'Could not find email address for google signin', HttpStatus.BAD_REQUEST);
+      let userData = user.getData();
 
-      return new Result<UserDocument>(true, userData, null, HttpStatus.OK);
+      if (!userData) {
+        const newUser = await this.googleSignUp(payload);
+
+        const newUserData = newUser.getData();
+
+        if (!newUserData) return new Result<null>(false, null, 'Could not create account using google', HttpStatus.BAD_REQUEST);
+
+        userData = newUserData;
+      }
+
+      return new Result<User>(true, userData, null, HttpStatus.OK);
     } catch (error) {
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'google_signin_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   public async googleOAuthVerification(token: string): Promise<Result<IUser | null>> {
     const ticket = await Client.verifyIdToken({ idToken: token, audience: this.configService.get<string>('GOOGLE_CLIENT_KEY') });
     const googlePayload = ticket.getPayload();
-    if (!googlePayload) throw new BadRequestException(ErrorMessages.GOOGLE_OAUTH_FAILED);
+    if (!googlePayload) return new Result<null>(false, null, 'Unable to retrieve your google profile', HttpStatus.BAD_REQUEST);
     if (!googlePayload.given_name || !googlePayload.family_name || !googlePayload.email || !googlePayload.email_verified || !googlePayload.picture) {
-      return new Result<null>(false, null, 'Invalid google payload', HttpStatus.BAD_REQUEST);
+      return new Result<null>(false, null, 'Invalid google profile', HttpStatus.BAD_REQUEST);
     }
     if (!googlePayload.email_verified) return new Result<null>(false, null, 'Google authentication failed', HttpStatus.BAD_REQUEST);
     const googleUser = {

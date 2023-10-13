@@ -1,10 +1,10 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { TransactionManager } from './transaction.manager';
-import { SocketDataService } from './socket.data';
 
+@Global()
 @Module({
-  providers: [AuthService, TransactionManager, SocketDataService],
-  exports: [AuthService, TransactionManager, SocketDataService],
+  providers: [AuthService, TransactionManager],
+  exports: [AuthService, TransactionManager],
 })
 export class SharedModule {}

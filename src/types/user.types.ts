@@ -3,7 +3,7 @@ import { AuthenticationMethod, Status } from '../utils/constant';
 export enum UserRole {
   CREATOR = 'creator',
   PLAYER = 'player',
-  ADMIN = 'admin',
+  ORGANIZER = 'organizer',
 }
 
 export interface IAuthUser {
@@ -15,6 +15,7 @@ export interface IAuthUser {
 export interface ISocketAuth {
   id: string;
   room: string;
+  role: UserRole;
 }
 
 export interface IInternalUser {

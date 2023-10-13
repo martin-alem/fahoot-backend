@@ -1,32 +1,39 @@
 export enum ErrorMessages {
-  EMAIL_NOT_FOUND = 'User with provided email address was not found',
-  INVALID_LOGIN = 'Invalid email or password',
-  INVALID_REQUEST = 'Invalid request',
-  ACCOUNT_INACTIVE = 'Your account is either suspended, deactivated, or has been terminated. Please contact support for more information.',
-  INTERNAL_ERROR = 'Something went wrong. Please try again later',
-  USER_NOT_FOUND = 'User with provided id not found',
-  USER_EXIST = 'User with provided email address already exists',
-  VERIFICATION_EXPIRED = 'Your verification code has expired',
-  UNAUTHORIZED = 'Your user is not authorized to carry out this operation',
-  UPLOAD_ERROR = 'Something went wrong while uploading the file',
-  FORBIDDEN = 'Your forbidden to access this resource.',
-  GOOGLE_OAUTH_FAILED = 'Unable to verify your Google account',
-  TOKEN_EMAIL_MISMATCH = 'The email address on the decoded token was not the same as the one in the database',
+  AUTH_GUARD_ERROR = 'You are not authorized to perform this action',
+  INTERNAL_SERVER_ERROR = 'Something went wrong. Please try again later',
 }
 
 export enum Events {
   ERROR = 'fahoot:error', // emitted when an error is encountered
   CONNECTED = 'fahoot:connected', // emitted when a user successfully connects
-  DISCONNECT = 'fahoot:disconnected', // emitted when a user disconnects
+  DISCONNECTED = 'fahoot:disconnected', // emitted when a user disconnects
+  PLAYER_JOINED = 'fahoot:player_join', // emitted when a player joins the game
+  LOCK_GAME = 'fahoot:lock_game', // emitted when the organizer locks the game
+  REMOVE_PLAYER = 'fahoot:remove_player', // emitted when the organizer removes a player
+}
+
+export enum PlayStatus {
+  PENDING = 'pending',
+  PLAYING = 'playing',
+  COMPLETED = 'completed',
+}
+
+export enum QuestionDifficulty {
+  EASY = 'easy',
+  MEDIUM = 'medium',
+  HARD = 'hard',
 }
 
 export const MAX_QUESTION_PER_QUIZ = 500;
 export const ACCESS_TOKEN_COOKIE_NAME = '_access_token';
+export const PLAY_TOKEN_COOKIE_NAME = '_play_access_token';
 export const REMEMBER_ME_COOKIE_NAME = '_remember_me_';
 export const SPACES_ROOT = 'uploads';
 export const DEFAULT_DATABASE_CONNECTION = 'fahoot_database_connection';
 export const PLAY_NAMESPACE = 'fahoot_play';
 export const MAX_FILE_SIZE = 1.1e7;
+export const MAX_PLAYER_PER_PLAY = 5;
+export const PLAYER_COLLECTION_NAME = 'players';
 
 export enum QuizStatus {
   PUBLISHED = 'published',
@@ -44,6 +51,7 @@ export enum CollectName {
   PLAYER = 'players',
   QUIZ = 'quizzes',
   PLAY = 'plays',
+  TOKEN = 'tokens',
 }
 
 export enum Status {
@@ -61,14 +69,21 @@ export enum EmailPurpose {
   PASSWORD_RESET = 'password reset',
 }
 
+export enum GameExitType {
+  PLAYER_EXIT = 'player_exit',
+  ORGANIZER_EXIT = 'organizer_exit',
+}
+
 export enum JWT_TTL {
   ACCESS_TOKEN_TTL = 3600, // in seconds = 1 hour
   REMEMBER_ME_TOKEN_TTL = 86400, // in seconds = 24 hours
+  PLAYER_TOKEN_TTL = 3600, // in seconds = 1 hour
 }
 
 export enum COOKIE {
   ACCESS_TOKEN_COOKIE_TTL = 3.6e6, // in milliseconds = 1 hour
   REMEMBER_ME_COOKIE_TTL = 8.64e7, // in milliseconds = 24 hours
+  PLAY_ACCESS_TOKEN_COOKIE_TTL = 3.6e6, // in milliseconds = 1 hour
 }
 
 export enum VERIFICATION_TOKEN_TTL {
@@ -82,154 +97,170 @@ export enum AuthenticationMethod {
 
 export enum EMAIL_VERIFICATION_REQUEST {
   /**
-   * 5 request in 60 seconds
+   * 5 requests in 600 seconds (10 minutes)
    */
   LIMIT = 5,
-  TTL = 60,
+  TTL = 600,
 }
 
 export enum SEND_VERIFICATION_EMAIL_REQUEST {
   /**
-   * 5 request in 60 seconds
+   * 5 requests in 600 seconds (10 minutes)
    */
   LIMIT = 5,
-  TTL = 60,
+  TTL = 600,
 }
 
 export enum PASSWORD_RESET_REQUEST {
   /**
-   * 5 request in 60 seconds
+   * 5 requests in 600 seconds (10 minutes)
    */
   LIMIT = 5,
-  TTL = 60,
+  TTL = 600,
 }
 
 export enum PASSWORD_RESET {
   /**
-   * 5 request in 60 seconds
+   * 5 requests in 600 seconds (10 minutes)
    */
   LIMIT = 5,
-  TTL = 60,
+  TTL = 600,
 }
 
 export enum CREATE_USER_REQUEST {
   /**
-   * 15 request in 60 seconds
+   * 10 requests in 600 seconds (10 minutes)
    */
-  LIMIT = 15,
-  TTL = 60,
+  LIMIT = 10,
+  TTL = 600,
 }
 
 export enum GET_USER_REQUEST {
   /**
-   * 30 request in 60 seconds
+   * 100 requests in 600 seconds (10 minutes)
    */
-  LIMIT = 30,
-  TTL = 60,
+  LIMIT = 100,
+  TTL = 600,
 }
 
 export enum UPDATE_USER_REQUEST {
   /**
-   * 30 request in 60 seconds
+   * 100 requests in 600 seconds (10 minutes)
    */
-  LIMIT = 30,
-  TTL = 60,
+  LIMIT = 100,
+  TTL = 600,
 }
 
 export enum DELETE_USER_REQUEST {
   /**
-   * 1 request in 60 seconds
+   * 1 requests in 600 seconds (10 minutes)
    */
   LIMIT = 1,
-  TTL = 60,
+  TTL = 600,
 }
 
 export enum CREATE_QUIZ_REQUEST {
   /**
-   * 25 request in 60 seconds
+   * 10 requests in 600 seconds (10 minutes)
    */
-  LIMIT = 25,
-  TTL = 60,
+  LIMIT = 10,
+  TTL = 600,
 }
 
 export enum GET_QUIZ_REQUEST {
   /**
-   * 25 request in 60 seconds
+   * 100 requests in 600 seconds (10 minutes)
    */
-  LIMIT = 25,
-  TTL = 60,
+  LIMIT = 100,
+  TTL = 600,
 }
 
 export enum GET_QUIZZES_REQUEST {
   /**
-   * 25 request in 60 seconds
+   * 100 requests in 600 seconds (10 minutes)
+   */
+  LIMIT = 100,
+  TTL = 600,
+}
+
+export enum CREATE_PLAY_REQUEST {
+  /**
+   * 25 requests in 600 seconds (10 minutes)
    */
   LIMIT = 25,
-  TTL = 60,
+  TTL = 600,
+}
+
+export enum GET_PLAY_REQUEST {
+  /**
+   * 100 requests in 600 seconds (10 minutes)
+   */
+  LIMIT = 100,
+  TTL = 600,
 }
 
 export enum UPDATE_QUIZ_REQUEST {
   /**
-   * 25 request in 60 seconds
+   * 25 requests in 600 seconds (10 minutes)
    */
   LIMIT = 25,
-  TTL = 60,
+  TTL = 600,
 }
 
 export enum DELETE_QUIZ_REQUEST {
   /**
-   * 1 request in 60 seconds
+   * 100 requests in 600 seconds (10 minutes)
    */
   LIMIT = 100,
-  TTL = 60,
+  TTL = 600,
 }
 
 export enum SIGNUP_REQUEST {
   /**
-   * 10 request in 60 seconds
+   * 10 requests in 600 seconds (10 minutes)
    */
-  LIMIT = 100,
-  TTL = 60,
+  LIMIT = 10,
+  TTL = 600,
 }
 
 export enum SIGNIN_REQUEST {
   /**
-   * 10 request in 60 seconds
+   * 5 requests in 600 seconds (10 minutes)
    */
-  LIMIT = 100,
-  TTL = 60,
+  LIMIT = 5,
+  TTL = 300,
 }
 
 export enum LOGOUT_REQUEST {
   /**
-   * 10 request in 60 seconds
+   * 5 requests in 600 seconds (10 minutes)
    */
-  LIMIT = 10,
-  TTL = 60,
+  LIMIT = 25,
+  TTL = 600,
 }
 
 export enum UPDATE_PASSWORD_REQUEST {
   /**
-   * 10 request in 60 seconds
+   * 10 requests in 600 seconds (10 minutes)
    */
-  LIMIT = 20,
-  TTL = 60,
+  LIMIT = 10,
+  TTL = 600,
 }
 
 export enum UPDATE_EMAIL_REQUEST {
   /**
-   * 10 request in 60 seconds
+   * 10 requests in 600 seconds (10 minutes)
    */
-  LIMIT = 20,
-  TTL = 60,
+  LIMIT = 10,
+  TTL = 600,
 }
 
 export enum UPLOAD_REQUEST {
   /**
-   * 10 request in 60 seconds
+   * 10 requests in 600 seconds (10 minutes)
    */
-  LIMIT = 50,
-  TTL = 60,
+  LIMIT = 10,
+  TTL = 600,
 }
 
 export enum LOG_REQUEST {

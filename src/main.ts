@@ -41,6 +41,7 @@ async function bootstrap(): Promise<void> {
   const config = new DocumentBuilder().setTitle('Fahoot API').setDescription('Fahoot API documentation').setVersion('1.0').addTag('Fahoot').build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
+
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap().catch((error) => console.error(error));

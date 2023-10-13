@@ -1,17 +1,19 @@
-import { HttpStatus, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { DeleteObjectCommand, PutObjectCommand, S3 } from '@aws-sdk/client-s3';
 import { IFileUpload } from './../../types/file.types';
-import { generateRandomToken } from './../../utils/helper';
+import { generateRandomToken, log } from './../../utils/helper';
 import { ConfigService } from '@nestjs/config';
-import { SPACES_ROOT, UploadDestination } from './../../utils/constant';
+import { ErrorMessages, SPACES_ROOT, UploadDestination } from './../../utils/constant';
 import Result from './../../wrapper/result';
+import { LoggerService } from '../logger/logger.service';
 
 @Injectable()
 export class UploadService {
   private readonly s3: S3;
   private readonly configService: ConfigService;
+  private readonly loggerService: LoggerService;
 
-  constructor(configService: ConfigService) {
+  constructor(configService: ConfigService, loggerService: LoggerService) {
     this.configService = configService;
     this.s3 = new S3({
       forcePathStyle: false, // Configures to use subdomain/virtual calling format.
@@ -22,6 +24,7 @@ export class UploadService {
         secretAccessKey: this.configService.get<string>('SPACES_SECRET') ?? '',
       },
     });
+    this.loggerService = loggerService;
   }
 
   async uploadFile(file: Express.Multer.File, destination: string): Promise<Result<IFileUpload | null>> {
@@ -52,7 +55,8 @@ export class UploadService {
       const data: IFileUpload = { filename: `https://${BUCKET}.${SPACES_ENDPOINT}/${fullPath}` };
       return new Result<IFileUpload>(true, data, null, HttpStatus.OK);
     } catch (error) {
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'upload_file_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -67,8 +71,8 @@ export class UploadService {
       await this.s3.send(new DeleteObjectCommand(params));
       return new Result<boolean>(true, true, null, HttpStatus.OK);
     } catch (error) {
-      if (!(error instanceof InternalServerErrorException)) throw error;
-      return new Result<null>(false, null, error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      log(this.loggerService, 'delete_file_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

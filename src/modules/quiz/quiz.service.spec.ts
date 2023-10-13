@@ -5,7 +5,7 @@ import { getModelToken } from '@nestjs/mongoose';
 import { TransactionManager } from '../shared/transaction.manager';
 import { Quiz } from './schema/quiz.schema';
 import { CreateQuizDTO } from './dto/create_quiz.dto';
-import { PaginationDTO } from './dto/pagination.dto';
+import { PaginationDTO } from './dto/quiz-pagination.dto';
 import { PaginationResult } from './../../types/pagination.types';
 import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
 

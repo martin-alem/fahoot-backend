@@ -1,6 +1,4 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { UserModule } from '../user/user.module';
 import { AuthenticationModule } from '../authentication/authentication.module';
 import { SecurityModule } from '../security/security.module';
@@ -17,6 +15,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { RabbitMQModule } from './../rabbitmq/rabbitmq.module';
 import { UploadModule } from '../upload/upload.module';
 import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
+import { PlayerModule } from '../player/player.module';
+import { SharedModule } from '../shared/shared.module';
 
 @Module({
   imports: [
@@ -28,8 +28,10 @@ import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
     AuthenticationModule,
     SecurityModule,
     NotificationModule,
+    SharedModule,
     QuizModule,
     PlayModule,
+    PlayerModule,
     AnalyticsModule,
     LoggerModule,
     RabbitMQModule,
@@ -49,7 +51,9 @@ import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
         JWT_TOKEN_AUDIENCE: Joi.string().required(),
         JWT_TOKEN_ISSUER: Joi.string().required(),
         RABBITMQ_URI: Joi.string().required(),
-        REDIS_URI: Joi.string().required(),
+        REDIS_PASSWORD: Joi.string().required(),
+        REDIS_HOST: Joi.string().required(),
+        REDIS_PORT: Joi.string().required(),
         GMAIL_EMAIL: Joi.string().required(),
         GMAIL_PASSWORD: Joi.string().required(),
         CLIENT_API_KEY: Joi.string().required(),
@@ -75,9 +79,7 @@ import { DEFAULT_DATABASE_CONNECTION } from './../../utils/constant';
       }),
     }),
   ],
-  controllers: [AppController],
   providers: [
-    AppService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

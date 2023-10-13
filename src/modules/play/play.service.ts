@@ -1,69 +1,203 @@
-import { UseFilters } from '@nestjs/common';
-import { MessageBody, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { GatewayExceptionsFilter } from 'src/exception/gateway.exception';
-import { SecurityService } from '../security/security.service';
-import { ISocketAuth } from 'src/types/user.types';
-import { SocketDataService } from '../shared/socket.data';
-import { Events, PLAY_NAMESPACE } from 'src/utils/constant';
-import { EventData } from 'src/wrapper/event.data';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { Play } from './schema/play.schema';
+import { Model } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
+import { DEFAULT_DATABASE_CONNECTION, ErrorMessages, QuizStatus } from 'src/utils/constant';
+import Result from 'src/wrapper/result';
+import { generateCode, log, validateObjectId } from 'src/utils/helper';
+import { QuizService } from '../quiz/quiz.service';
+import { UpdatePlayDTO } from './dto/update-play.dto';
+import { TransactionManager } from '../shared/transaction.manager';
+import { PlayPaginationDTO } from './dto/play-pagination.dto';
+import { IPaginationResult } from 'src/types/pagination_result.type';
+import { LoggerService } from '../logger/logger.service';
 
-@UseFilters(GatewayExceptionsFilter)
-@WebSocketGateway({ cors: { origin: ['https://fahoot.com', 'http://localhost:8000'] }, namespace: PLAY_NAMESPACE })
-export class PlayService implements OnGatewayConnection, OnGatewayDisconnect {
-  @WebSocketServer()
-  private readonly server: Server;
-  private readonly securityService: SecurityService;
-  private readonly socketDataService: SocketDataService;
+@Injectable()
+export class PlayService {
+  private readonly playModel: Model<Play>;
+  private readonly quizService: QuizService;
+  private readonly transactionManager: TransactionManager;
+  private readonly loggerService: LoggerService;
 
-  constructor(securityService: SecurityService, socketDataService: SocketDataService) {
-    this.securityService = securityService;
-    this.socketDataService = socketDataService;
+  constructor(
+    @InjectModel(Play.name, DEFAULT_DATABASE_CONNECTION) playModel: Model<Play>,
+    quizService: QuizService,
+    transactionManager: TransactionManager,
+    loggerService: LoggerService,
+  ) {
+    this.playModel = playModel;
+    this.quizService = quizService;
+    this.transactionManager = transactionManager;
+    this.loggerService = loggerService;
   }
-  public async handleConnection(client: Socket): Promise<void> {
+
+  public async createPlay(quizId: string, userId: string): Promise<Result<Play | null>> {
     try {
-      const cookie = client.handshake.headers.cookie;
-      if (!cookie) {
-        const data = { message: 'Invalid token' };
-        client.emit(Events.ERROR, new EventData(Events.ERROR, data, PLAY_NAMESPACE, null, null));
-        client.disconnect(true);
-        return;
-      }
-      const result = await this.securityService.validateToken<ISocketAuth>(cookie);
+      const isValidQuizObjectId = validateObjectId(quizId);
+      if (!isValidQuizObjectId.getData()) return new Result<null>(false, null, `Invalid quiz ${quizId}`, HttpStatus.BAD_REQUEST);
 
-      const resultData = result.getData();
+      const quiz = await this.quizService.getQuizById(quizId);
 
-      if (!resultData) {
-        const data = { message: 'Unable to verify token' };
-        client.emit(Events.ERROR, new EventData(Events.ERROR, data, PLAY_NAMESPACE, null, null));
-        client.disconnect(true);
-        return;
-      }
+      const quizData = quiz.getData();
 
-      this.socketDataService.setSocketData(client, resultData);
+      if (!quizData) return new Result<null>(false, null, quiz.getError(), HttpStatus.BAD_REQUEST);
 
-      console.log(resultData);
-      await client.join(resultData.room);
+      if (quizData.status === QuizStatus.DRAFT)
+        return new Result<null>(false, null, `Quiz must be published in order to create a play`, HttpStatus.BAD_REQUEST);
 
-      const data = { message: 'Connection successfully established' };
-      client.emit(Events.ERROR, new EventData(Events.ERROR, data, PLAY_NAMESPACE, null, resultData.room));
+      const playName = quizData.title;
+      const code = generateCode(7);
+
+      const newPlay = await this.playModel.create({ quiz: quizId, user: userId, name: playName, code: code });
+
+      if (!newPlay) return new Result<null>(false, null, 'Unable to create play at the moment', HttpStatus.BAD_REQUEST);
+
+      return new Result<Play>(true, newPlay, null, HttpStatus.OK);
     } catch (error) {
-      const data = { message: 'Unable to establish connection' };
-      client.emit(Events.ERROR, new EventData(Events.ERROR, data, PLAY_NAMESPACE, null, null));
-      client.disconnect(true);
-      return;
+      console.log(error);
+      log(this.loggerService, 'create_play_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  handleDisconnect(client: Socket): void {
-    const data = { message: 'Connection successfully terminated' };
-    const room = this.socketDataService.getSocketData(client)?.room ?? null;
-    const recipient = this.socketDataService.getSocketData(client)?.id ?? null;
-    client.emit(Events.DISCONNECT, new EventData(Events.DISCONNECT, data, PLAY_NAMESPACE, recipient, room));
+  public async getPlayById(playId: string): Promise<Result<Play | null>> {
+    try {
+      const isValidPlayObjectId = validateObjectId(playId);
+      if (!isValidPlayObjectId.getData()) return new Result<null>(false, null, `Invalid play id: ${playId}`, HttpStatus.BAD_REQUEST);
+
+      const play = await this.playModel.findById(playId).populate('quiz').populate('user');
+
+      if (!play) return new Result<null>(false, null, `Unable to find play with Id: ${playId}`, HttpStatus.BAD_REQUEST);
+
+      return new Result<Play>(true, play, null, HttpStatus.OK);
+    } catch (error) {
+      log(this.loggerService, 'get_play_by_id_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
-  @SubscribeMessage('identity')
-  async identity(@MessageBody() data: number): Promise<number> {
-    return data;
+  public async getPlayByPin(gamePin: string): Promise<Result<Play | null>> {
+    try {
+      const play = await this.playModel.findOne({ code: gamePin }).populate('quiz').populate('user');
+
+      if (!play) return new Result<null>(false, null, `Unable to find a play with pin: ${gamePin}`, HttpStatus.BAD_REQUEST);
+
+      return new Result<Play>(true, play, null, HttpStatus.OK);
+    } catch (error) {
+      log(this.loggerService, 'get_play_by_pin_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  public async getPlayList(quizId: string, pagination: PlayPaginationDTO): Promise<Result<IPaginationResult<Play> | null>> {
+    try {
+      const isValidQuizObjectId = validateObjectId(quizId);
+
+      if (!isValidQuizObjectId.getData()) return new Result<null>(false, null, `Invalid quiz id: ${quizId}`, HttpStatus.BAD_REQUEST);
+
+      const { page, pageSize, query } = pagination;
+
+      //Preventing page from being 0
+      const skip = (page == 0 ? 0 : page - 1) * pageSize;
+      const sortField = pagination.sortField ?? 'createdAt';
+      const sortOrder = pagination.sortOrder === 'desc' ? -1 : 1;
+
+      const totalPlays = await this.playModel.countDocuments({
+        quiz: quizId,
+        title: { $regex: query ? query : '', $options: 'i' },
+      });
+      const totalPages = Math.ceil(totalPlays / pageSize);
+
+      const results = await this.playModel
+        .find({ quiz: quizId, status: sortField })
+        .where('title')
+        .regex(new RegExp(query ? query : '', 'i'))
+        .sort({ createdAt: sortOrder })
+        .skip(skip)
+        .limit(pageSize)
+        .exec();
+
+      return new Result<IPaginationResult<Play>>(true, { results, total: totalPlays, totalPages }, null, HttpStatus.OK);
+    } catch (error) {
+      log(this.loggerService, 'get_play_list_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  public async updatePlay(payload: UpdatePlayDTO, playId: string): Promise<Result<Play | null>> {
+    try {
+      const validatePlayObjectId = validateObjectId(playId);
+
+      if (!validatePlayObjectId.getData()) return new Result<null>(false, null, `Invalid play id: ${playId}`, HttpStatus.BAD_REQUEST);
+
+      const updatedPlay = await this.playModel.findOneAndUpdate({ _id: playId }, payload, { new: true });
+
+      if (!updatedPlay) return new Result<null>(false, null, 'Unable to update play', HttpStatus.BAD_REQUEST);
+
+      return new Result<Play>(true, updatedPlay, null, HttpStatus.OK);
+    } catch (error) {
+      log(this.loggerService, 'update_play_error', error.message);
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  public async deletePlay(playId: string): Promise<Result<boolean | null>> {
+    try {
+      const validatePlayObjectId = validateObjectId(playId);
+
+      if (!validatePlayObjectId.getData()) return new Result<null>(false, null, `Invalid play id: ${playId}`, HttpStatus.BAD_REQUEST);
+
+      const session = await this.transactionManager.startSession();
+
+      await this.transactionManager.startTransaction();
+
+      const deletedPlay = await this.playModel.deleteOne({ _id: playId }, { session: session });
+
+      if (!deletedPlay.acknowledged) {
+        await this.transactionManager.abortTransaction();
+        return new Result<null>(false, null, 'Unable to delete play', HttpStatus.BAD_REQUEST);
+      }
+      await this.transactionManager.commitTransaction();
+
+      return new Result<boolean>(true, deletedPlay.acknowledged, null, HttpStatus.OK);
+    } catch (error) {
+      log(this.loggerService, 'delete_play_error', error.message);
+      await this.transactionManager.abortTransaction();
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
+    } finally {
+      await this.transactionManager.endSession();
+    }
+  }
+
+  public async deletePlayList(quizId: string, playIds: string[]): Promise<Result<boolean | null>> {
+    try {
+      const validQuizObjectId = validateObjectId(quizId);
+
+      if (!validQuizObjectId.getData()) return new Result<null>(false, null, `Invalid play id: ${quizId}`, HttpStatus.BAD_REQUEST);
+
+      for (const q of playIds) {
+        const isValidPlayObjectId = validateObjectId(q);
+        if (!isValidPlayObjectId.getData()) return new Result<null>(false, null, `Invalid play id: ${q}`, HttpStatus.BAD_REQUEST);
+      }
+
+      const session = await this.transactionManager.startSession();
+
+      await this.transactionManager.startTransaction();
+
+      const deletedPlayList = await this.playModel.deleteMany({ quiz: quizId, _id: { $in: playIds } }, { session: session });
+
+      if (!deletedPlayList.acknowledged) {
+        await this.transactionManager.abortTransaction();
+        return new Result<null>(false, null, `Unable to delete playlist`, HttpStatus.BAD_REQUEST);
+      }
+
+      return new Result<boolean>(true, deletedPlayList.acknowledged, null, HttpStatus.OK);
+    } catch (error) {
+      log(this.loggerService, 'delete_plays_error', error.message);
+      await this.transactionManager.abortTransaction();
+      return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
+    } finally {
+      await this.transactionManager.endSession();
+    }
   }
 }

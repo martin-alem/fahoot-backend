@@ -1,8 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
+import { CollectName } from 'src/utils/constant';
 
-@Schema({ autoCreate: true, collection: 'tokens', timestamps: true })
-export class Token {
+@Schema({ autoCreate: true, collection: CollectName.TOKEN, timestamps: true })
+export class Token extends Document<Types.ObjectId> {
   @Prop({ type: String, required: true, unique: true })
   token: string;
 
@@ -10,5 +11,4 @@ export class Token {
   emailAddress: string;
 }
 
-export type TokenDocument = Token & Document;
 export const TokenSchema = SchemaFactory.createForClass(Token);
