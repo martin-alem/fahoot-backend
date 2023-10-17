@@ -84,4 +84,36 @@ export class PlayGateway implements OnGatewayConnection {
       this.server.to(data.room).emit(Events.REMOVE_PLAYER, newData);
     }
   }
+
+  @SubscribeMessage(Events.START_GAME)
+  async startGame(@MessageBody() data: IEventData): Promise<void> {
+    if (!data.room) return;
+    const updatePlay = await this.playService.updatePlay({ isOpen: false }, data.room);
+    const updatePlayData = updatePlay.getData();
+    if (updatePlayData) {
+      const newData = new EventData(Events.START_GAME, { question: 0 }, data.namespace, null, data.room);
+      this.server.to(data.room).emit(Events.START_GAME, newData);
+    }
+  }
+
+  @SubscribeMessage(Events.QUESTION_TIME_OUT)
+  async questionTimeOut(@MessageBody() data: IEventData, @ConnectedSocket() client: Socket): Promise<void> {
+    if (!data.room) return;
+    const newData = new EventData(Events.QUESTION_TIME_OUT, null, data.namespace, null, data.room);
+    client.to(data.room).emit(Events.QUESTION_TIME_OUT, newData);
+  }
+
+  @SubscribeMessage(Events.NEXT_QUESTION)
+  async nextQuestion(@MessageBody() data: IEventData, @ConnectedSocket() client: Socket): Promise<void> {
+    if (!data.room) return;
+    const newData = new EventData(Events.NEXT_QUESTION, data.data, data.namespace, null, data.room);
+    client.to(data.room).emit(Events.NEXT_QUESTION, newData);
+  }
+
+  @SubscribeMessage(Events.END_GAME)
+  async endGame(@MessageBody() data: IEventData, @ConnectedSocket() client: Socket): Promise<void> {
+    if (!data.room) return;
+    const newData = new EventData(Events.END_GAME, null, data.namespace, null, data.room);
+    client.to(data.room).emit(Events.END_GAME, newData);
+  }
 }

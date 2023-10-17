@@ -10,6 +10,11 @@ export enum Events {
   PLAYER_JOINED = 'fahoot:player_join', // emitted when a player joins the game
   LOCK_GAME = 'fahoot:lock_game', // emitted when the organizer locks the game
   REMOVE_PLAYER = 'fahoot:remove_player', // emitted when the organizer removes a player
+  PLAYER_ANSWER = 'fahoot:player_answer', // emitted when a player submits their answer
+  QUESTION_TIME_OUT = 'fahoot:question_timeout', // emitted when a question timeout is reached
+  NEXT_QUESTION = 'fahoot:next_question', // emitted when the next question is received
+  START_GAME = 'fahoot:start_game', // emitted when the game starts
+  END_GAME = 'fahoot:end_game', // emitted when the game
 }
 
 export enum PlayStatus {

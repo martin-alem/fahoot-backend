@@ -124,13 +124,13 @@ export class PlayService {
     }
   }
 
-  public async updatePlay(payload: UpdatePlayDTO, playId: string): Promise<Result<Play | null>> {
+  public async updatePlay(payload: Partial<UpdatePlayDTO>, playId: string): Promise<Result<Play | null>> {
     try {
       const validatePlayObjectId = validateObjectId(playId);
 
       if (!validatePlayObjectId.getData()) return new Result<null>(false, null, `Invalid play id: ${playId}`, HttpStatus.BAD_REQUEST);
 
-      const updatedPlay = await this.playModel.findOneAndUpdate({ _id: playId }, payload, { new: true });
+      const updatedPlay = await this.playModel.findOneAndUpdate({ _id: playId }, payload, { new: true }).populate('quiz').populate('user');
 
       if (!updatedPlay) return new Result<null>(false, null, 'Unable to update play', HttpStatus.BAD_REQUEST);
 

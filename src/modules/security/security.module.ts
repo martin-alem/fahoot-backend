@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, NestModule, forwardRef } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, RequestMethod, forwardRef } from '@nestjs/common';
 import { SecurityService } from './security.service';
 import { SecurityController } from './security.controller';
 import { Token, TokenSchema } from './schema/tokens.schema';
@@ -23,6 +23,13 @@ import { AccessTokenMiddleware } from 'src/middleware/access_token.middleware';
 })
 export class SecurityModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(APIKeyMiddleware, AccessTokenMiddleware).forRoutes(SecurityController);
+    consumer.apply(APIKeyMiddleware).forRoutes(SecurityController);
+    consumer
+      .apply(AccessTokenMiddleware)
+      .exclude(
+        { path: '/security/email_verification', method: RequestMethod.POST },
+        { path: '/security/password_reset_request', method: RequestMethod.POST },
+        { path: '/security/password_reset', method: RequestMethod.POST },
+      );
   }
 }
