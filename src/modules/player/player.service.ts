@@ -112,7 +112,7 @@ export class PlayerService {
 
       if (!deletedPlayer) return new Result<null>(false, null, 'Unable to delete player', HttpStatus.BAD_REQUEST);
 
-      return new Result<Player>(true, deletedPlayer, null, HttpStatus.OK);
+      return new Result<Player>(true, null, null, HttpStatus.OK);
     } catch (error) {
       log(this.loggerService, 'delete_player_error', error.message);
       return new Result<null>(false, null, ErrorMessages.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);

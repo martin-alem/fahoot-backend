@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { DeleteObjectCommand, PutObjectCommand, S3 } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, PutObjectCommand, PutObjectCommandInput, S3 } from '@aws-sdk/client-s3';
 import { IFileUpload } from './../../types/file.types';
 import { generateRandomToken, log } from './../../utils/helper';
 import { ConfigService } from '@nestjs/config';
@@ -44,7 +44,7 @@ export class UploadService {
     try {
       const BUCKET = this.configService.get<string>('SPACES_BUCKET');
       const SPACES_ENDPOINT = this.configService.get<string>('SPACES_ENDPOINT');
-      const params = {
+      const params: PutObjectCommandInput = {
         Bucket: BUCKET ?? '',
         Key: `${fullPath}`,
         Body: file.buffer,

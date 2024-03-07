@@ -13,7 +13,7 @@ async function bootstrap(): Promise<void> {
   app.use(cookieParser(process.env.COOKIE_SECRET));
   app.enableCors({
     origin: function (origin, callback) {
-      const allowedOrigins = ['http://localhost:8000', 'https://fahoot.com', 'https://www.fahoot.com'];
+      const allowedOrigins = ['http://localhost:3000', 'https://fahoot.com', 'https://www.fahoot.com'];
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -42,6 +42,6 @@ async function bootstrap(): Promise<void> {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 8080);
 }
 bootstrap().catch((error) => console.error(error));
