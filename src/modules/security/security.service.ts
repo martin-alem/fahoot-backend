@@ -193,9 +193,6 @@ export class SecurityService {
 
       if ('emailAddress' in decodedTokenData) {
         if (decodedTokenData.emailAddress !== tokenExist.emailAddress) return new Result<null>(false, null, 'Token mismatch', HttpStatus.BAD_REQUEST);
-        const deletedToken = await this.tokenModel.findOneAndDelete({ token });
-        if (!deletedToken) return new Result<null>(false, null, 'Token could not be deleted', HttpStatus.BAD_REQUEST);
-
         return new Result<T>(true, decodedToken.getData(), null, HttpStatus.OK);
       }
       return new Result<null>(false, null, 'Token could not be decoded', HttpStatus.BAD_REQUEST);

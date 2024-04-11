@@ -29,7 +29,7 @@ async function bootstrap(): Promise<void> {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      disableErrorMessages: process.env.NODE_ENV === 'production' ? true : false,
+      disableErrorMessages: process.env.NODE_ENV === 'production',
     }),
   );
 

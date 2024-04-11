@@ -1,13 +1,13 @@
 import { Controller, UseGuards, Post, Get, Param, Put, Delete, Body, Query } from '@nestjs/common';
 import { QuizService } from './quiz.service';
 import { Throttle } from '@nestjs/throttler';
-import { CREATE_QUIZ_REQUEST, DELETE_QUIZ_REQUEST, GET_QUIZZES_REQUEST, GET_QUIZ_REQUEST, Status, UPDATE_QUIZ_REQUEST } from './../../utils/constant';
-import { Active, Role } from './../../decorator/auth.decorator';
-import { UserRole } from './../../types/user.types';
-import { AuthorizationGuard } from './../../guard/auth.guard';
+import { CREATE_QUIZ_REQUEST, DELETE_QUIZ_REQUEST, GET_QUIZZES_REQUEST, GET_QUIZ_REQUEST, Status, UPDATE_QUIZ_REQUEST } from '../../utils/constant';
+import { Active, Role } from '../../decorator/auth.decorator';
+import { UserRole } from '../../types/user.types';
+import { AuthorizationGuard } from '../../guard/auth.guard';
 import { CreateQuizDTO } from './dto/create_quiz.dto';
 import { Quiz } from './schema/quiz.schema';
-import { IPaginationResult } from './../../types/pagination_result.type';
+import { IPaginationResult } from '../../types/pagination_result.type';
 import { QuizPaginationDTO } from './dto/quiz-pagination.dto';
 import { AuthService } from '../shared/auth.service';
 import { extractIds, handleResult } from 'src/utils/helper';

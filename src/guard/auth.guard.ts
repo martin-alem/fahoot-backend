@@ -1,8 +1,8 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { UserRole } from './../types/user.types';
-import { ErrorMessages, Status } from './../utils/constant';
-import { AuthService } from './../modules/shared/auth.service';
+import { UserRole } from '../types/user.types';
+import { ErrorMessages, Status } from '../utils/constant';
+import { AuthService } from '../modules/shared/auth.service';
 
 @Injectable()
 export class AuthorizationGuard implements CanActivate {
